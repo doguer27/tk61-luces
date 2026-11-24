@@ -1,5 +1,5 @@
 // TK61 Luces - proceso principal: habla con el teclado, corre las animaciones y vive en la bandeja.
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, globalShortcut, dialog, session, desktopCapturer } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, globalShortcut, dialog, session, desktopCapturer, shell } = require('electron');
 const path = require('path'), fs = require('fs'), os = require('os');
 const HID = require('node-hid');
 const TK = require('./protocolo'), A = require('./animaciones');
@@ -255,6 +255,7 @@ function createWindow(show) {
   win.setMenu(null);
   win.loadFile(path.join(__dirname, 'index.html'), TAB ? { hash: TAB } : undefined);
   if (SHOT) win.webContents.once('did-finish-load', () => setTimeout(async () => {
+    if (process.argv.includes('--abajo')) { await win.webContents.executeJavaScript("document.querySelector('.tabrow').scrollIntoView()"); await new Promise(r => setTimeout(r, 400)); }
     fs.writeFileSync(SHOT, (await win.webContents.capturePage()).toPNG());
     fs.writeFileSync(SHOT + '.json', JSON.stringify({ link, anim: anim && anim.id, audio }));
     quitting = true; app.quit();
@@ -353,6 +354,7 @@ ipcMain.on('audio', (_e, a) => { audio = a && Array.isArray(a.bands) && a.bands.
 ipcMain.handle('retry', () => { lastFail = 0; closeDev(); const ok = findInfo() ? handshake() : (setLink('sin'), false); if (ok) resumeLive(); return link; });
 ipcMain.handle('update-check', () => { if (updater) updater.checkForUpdates().catch(() => {}); else setupUpdater(); return upd; });
 ipcMain.handle('update-install', installUpdate);
+ipcMain.handle('open-repo', () => shell.openExternal('https://github.com/doguer27/tk61-luces'));
 ipcMain.handle('export', async () => {
   const r = await dialog.showSaveDialog(win, { title: 'Exportar perfiles y ajustes', defaultPath: 'tk61-luces.json', filters: [{ name: 'JSON', extensions: ['json'] }] });
   if (r.canceled) return { ok: false };

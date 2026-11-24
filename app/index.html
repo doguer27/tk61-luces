@@ -112,8 +112,31 @@
   input[type=text] { padding: 9px 12px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel2); min-width: 260px; }
   input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 
+  .panel.settings { background: none; border: 0; padding: 0; }
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  @media (max-width: 820px) { .cards { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 18px 6px; }
+  .card.wide { grid-column: 1 / -1; }
+  .card > header { display: flex; gap: 12px; align-items: center; margin: 0 0 12px; padding: 0; max-width: none; }
+  .card .ico { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; flex: none; color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, var(--panel2)); }
+  .card .ico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .card h3 { margin: 0; font-size: 15.5px; font-weight: 650; }
+  .card header p { margin: 1px 0 0; font-size: 12.5px; color: var(--dim); max-width: none; }
+  .sw-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); cursor: pointer; }
+  .sw-row > span { flex: 1; }
+  .sw-row small, .note { display: block; color: var(--dim); font-size: 12.5px; margin-top: 3px; line-height: 1.35; }
+  .note { margin-top: 10px; }
+  .block { padding: 13px 0; border-top: 1px solid var(--line); }
+  .switch { appearance: none; width: 42px; height: 24px; border-radius: 999px; background: #2a2e3a; position: relative; cursor: pointer; transition: background .15s; flex: none; margin: 0; }
+  .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #8b91a1; transition: left .15s, background .15s; }
+  .switch:checked { background: var(--accent); }
+  .switch:checked::after { left: 21px; background: #06121a; }
+  .switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 7px 16px; margin: 0; font-size: 13.5px; align-items: center; }
+  .kv dt { color: var(--dim); white-space: nowrap; } .kv dd { margin: 0; }
+  kbd { padding: 2px 7px; border-radius: 6px; background: var(--panel2); border: 1px solid var(--line); font: 600 11.5px "Segoe UI", system-ui; color: var(--text); }
   .cal { display: none; margin-top: 12px; padding: 16px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); }
-  .cal.on { display: block; }
+  .cal.on { display: block; border-color: var(--accent); padding-bottom: 18px; }
   .cal .big { font-size: 17px; color: var(--text); margin-bottom: 4px; }
   .bar { height: 6px; border-radius: 3px; background: #0c0d11; margin: 12px 0; overflow: hidden; }
   .bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .15s; }
@@ -251,51 +274,89 @@
     <div class="profiles" id="plist"></div>
   </section>
 
-  <section class="panel" data-panel="ajustes">
-    <h2>Arranque</h2>
-    <div class="setrow"><label class="toggle"><input type="checkbox" id="sAuto"><span>Abrir al iniciar Windows<small>Arranca escondida en la bandeja.</small></span></label></div>
-    <div class="setrow"><label class="toggle"><input type="checkbox" id="sTray"><span>Al cerrar la ventana, seguir en la bandeja<small>La X no apaga la app: queda junto al reloj y las animaciones siguen. Para salir del todo: clic derecho en el icono → Salir.</small></span></label></div>
-    <div class="setrow"><label class="toggle"><input type="checkbox" id="sExit"><span>Al salir de la app, devolver el teclado a lo último guardado<small>Si no, se queda congelado en el último cuadro de la animación hasta que lo desenchufes.</small></span></label></div>
-    <div class="setrow"><label class="toggle"><input type="checkbox" id="sPrev"><span>Vista previa animada en la ventana<small>Apágala si quieres que la app gaste lo mínimo mientras está abierta; el teclado sigue igual.</small></span></label></div>
-    <div class="setrow"><label class="toggle"><input type="checkbox" id="sRestore"><span>Retomar la animación al abrir o al reconectar el teclado</span></label></div>
-    <div class="setrow"><label class="toggle"><input type="checkbox" id="sKeys"><span>Atajos de teclado para los perfiles<small>Ctrl + Alt + Shift + 1…9 pone el perfil de esa posición; con 0 apaga las luces. Funcionan desde cualquier programa.</small></span></label></div>
-
-    <h2>Animaciones</h2>
-    <div class="field" style="margin-bottom:6px"><div class="lbl"><span>Fluidez (cuadros por segundo)</span></div>
-      <div class="seg" id="sFps"><button data-fps="12">Suave para el USB · 12</button><button data-fps="20">Normal · 20</button><button data-fps="30">Muy fluida · 30</button></div></div>
-    <p>Cada cuadro son datos que viajan por USB. Si el ratón da tirones estando en el mismo hub que el teclado, baja esto.</p>
-
-    <h2>Mapa de teclas</h2>
-    <p>El teclado recibe los colores por posición interna, y la de cada tecla de este modelo no está documentada: viene un mapa estimado. Afecta a «Por tecla» y a las animaciones; los efectos no lo usan.</p>
-    <div class="actions" style="margin-top:0">
-      <button class="btn" id="calTest">Probar mapa (una fila de cada color)</button>
-      <button class="btn primary" id="calStart">Calibración guiada</button>
-      <button class="btn danger" id="calReset">Volver al mapa estimado</button>
-    </div>
-    <div class="cal" id="cal">
-      <div class="big" id="calBig"></div>
-      <div id="calSub" style="color:var(--dim)"></div>
-      <div class="bar"><i id="calBar"></i></div>
-      <div class="actions" style="margin-top:0">
-        <button class="btn" id="calNone">No se encendió ninguna</button>
-        <button class="btn" id="calBack">Atrás</button>
-        <button class="btn primary" id="calDone">Terminar y guardar</button>
-        <button class="btn danger" id="calCancel">Cancelar</button>
+  <section class="panel settings" data-panel="ajustes">
+    <div class="cards">
+      <div class="cal card wide" id="cal">
+        <div class="big" id="calBig"></div>
+        <div id="calSub" style="color:var(--dim)"></div>
+        <div class="bar"><i id="calBar"></i></div>
+        <div class="actions" style="margin-top:0">
+          <button class="btn" id="calNone">No se encendió ninguna</button>
+          <button class="btn" id="calBack">Atrás</button>
+          <button class="btn primary" id="calDone">Terminar y guardar</button>
+          <button class="btn danger" id="calCancel">Cancelar</button>
+        </div>
       </div>
-    </div>
 
-    <h2>Copia de seguridad</h2>
-    <div class="actions" style="margin-top:0">
-      <button class="btn" id="exp">Exportar perfiles y ajustes…</button>
-      <button class="btn" id="imp">Importar…</button>
-    </div>
+      <article class="card">
+        <header><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v9M6.3 6.8a8 8 0 1 0 11.4 0"/></svg></span><div><h3>General</h3><p>Cómo arranca y qué pasa al cerrarla</p></div></header>
+      <label class="sw-row"><span>Abrir al iniciar Windows<small>Arranca escondida en la bandeja, junto al reloj.</small></span><input type="checkbox" class="switch" id="sAuto"></label>
+      <label class="sw-row"><span>Al cerrar la ventana, seguir en la bandeja<small>La X no apaga la app y las animaciones siguen. Para salir del todo: clic derecho en el icono → Salir.</small></span><input type="checkbox" class="switch" id="sTray"></label>
+      <label class="sw-row"><span>Al salir, devolver el teclado a lo último guardado<small>Si no, se queda congelado en el último cuadro de la animación.</small></span><input type="checkbox" class="switch" id="sExit"></label>
+      </article>
 
-    <h2>Actualizaciones</h2>
-    <p id="updText" style="color:var(--text)"></p>
-    <div class="actions" style="margin-top:0">
-      <button class="btn" id="updCheck">Buscar ahora</button>
-      <button class="btn primary" id="updInstall" hidden>Reiniciar e instalar</button>
-      <span style="color:var(--dim);font-size:13px" id="ver"></span>
+      <article class="card">
+        <header><span class="ico"><svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg></span><div><h3>Animaciones</h3><p>Fluidez y consumo</p></div></header>
+        <div class="block">
+          <div class="lbl"><span>Fluidez (cuadros por segundo)</span></div>
+          <div class="seg" id="sFps"><button data-fps="12">Suave · 12</button><button data-fps="20">Normal · 20</button><button data-fps="30">Muy fluida · 30</button></div>
+          <small class="note">Cada cuadro viaja por USB. Si otro aparato del mismo hub da tirones, baja esto.</small>
+        </div>
+      <label class="sw-row"><span>Retomar la animación al abrir<small>También al volver a enchufar el teclado.</small></span><input type="checkbox" class="switch" id="sRestore"></label>
+      <label class="sw-row"><span>Vista previa animada en la ventana<small>Apágala para gastar lo mínimo mientras la ventana está abierta; el teclado sigue igual.</small></span><input type="checkbox" class="switch" id="sPrev"></label>
+      </article>
+
+      <article class="card">
+        <header><span class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/></svg></span><div><h3>Teclado</h3><p>Conexión y mapa de teclas</p></div></header>
+        <div class="block"><dl class="kv" id="kbInfo"></dl></div>
+        <div class="block">
+          <small class="note" style="margin:0 0 10px">El teclado recibe los colores por posición interna. Si «Por tecla» o las animaciones encienden teclas que no tocan, calíbralo aquí.</small>
+          <div class="seg">
+            <button class="btn" id="calTest">Probar mapa</button>
+            <button class="btn primary" id="calStart">Calibración guiada</button>
+            <button class="btn danger" id="calReset">Volver al estimado</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <header><span class="ico"><svg viewBox="0 0 24 24"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg></span><div><h3>Atajos</h3><p>Cambia de perfil sin abrir la app</p></div></header>
+      <label class="sw-row"><span>Atajos de teclado globales<small>Funcionan desde cualquier programa.</small></span><input type="checkbox" class="switch" id="sKeys"></label>
+        <div class="block">
+          <dl class="kv">
+            <dt><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>1</kbd>…<kbd>9</kbd></dt><dd>Pone el perfil de esa posición en «Mis perfiles»</dd>
+            <dt><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>0</kbd></dt><dd>Apaga las luces</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <header><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></span><div><h3>Actualizaciones</h3><p id="ver"></p></div></header>
+        <div class="block">
+          <p id="updText" style="color:var(--text);margin:0 0 12px"></p>
+          <div class="seg">
+            <button class="btn" id="updCheck">Buscar ahora</button>
+            <button class="btn primary" id="updInstall" hidden>Instalar y reiniciar</button>
+          </div>
+          <small class="note">Las versiones nuevas se descargan solas y te avisan para instalarlas.</small>
+        </div>
+      </article>
+
+      <article class="card">
+        <header><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 7h16v4H4zM6 11v8h12v-8M10 15h4"/></svg></span><div><h3>Copia de seguridad</h3><p>Perfiles, mapa y ajustes en un archivo</p></div></header>
+        <div class="block">
+          <div class="seg">
+            <button class="btn" id="exp">Exportar…</button>
+            <button class="btn" id="imp">Importar…</button>
+          </div>
+          <small class="note">Sirve para pasar tus perfiles a otra PC o compartirlos.</small>
+        </div>
+      </article>
+
+      <article class="card wide">
+        <header><span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg></span><div><h3>Acerca de TK61 Luces</h3><p>Código abierto (GPL-2.0). No recoge datos ni necesita drivers; el protocolo se conoce gracias al proyecto OpenRGB.</p></div>
+          <span style="flex:1"></span><button class="btn" id="repo">Ver en GitHub</button></header>
+      </article>
     </div>
   </section>
 </main>
@@ -352,6 +413,7 @@ function showLink(l) {
   if (l.state === 'mudo') { b.classList.add('on'); $('bannerText').innerHTML = '<b>El teclado está conectado pero no acepta órdenes.</b> Suele ser el puerto USB del PC: cambia el teclado (o su hub) a otro puerto y pulsa Reintentar.'; }
   else if (l.state === 'sin') { b.classList.add('on'); $('bannerText').innerHTML = '<b>No encuentro el TK61.</b> Conéctalo por cable USB. La vista previa sigue funcionando.'; }
   else b.classList.remove('on');
+  renderKbInfo();
   setupMaybe();
 }
 $('retry').onclick = async () => { showLink({ state: 'buscando' }); showLink(await api('retry')); };
@@ -712,7 +774,19 @@ async function audioStart() {
 window.tk61.on('audio', on => { if (on) audioStart(); else if (audioStop) audioStop(); });
 
 /* ---------- Ajustes ---------- */
+function renderKbInfo() {
+  if (!cfg) return;
+  const parts = (link.full || '').split(','), calibrated = JSON.stringify(cfg.map) !== JSON.stringify(DEFAULT_MAP);
+  const rows = [
+    ['Estado', { ok: 'Conectado', mudo: 'Conectado, pero no acepta órdenes', sin: 'No encontrado', buscando: 'Buscando…' }[link.state] || ''],
+    ['Modelo', link.state === 'ok' ? (parts[4] || 'Desconocido') : '—'],
+    ['Firmware', link.state === 'ok' ? (link.version || '—') : '—'],
+    ['Mapa de teclas', calibrated ? 'Calibrado por ti' : cfg.setup ? 'Estimado (lo confirmaste)' : 'Estimado, sin comprobar'],
+  ];
+  $('kbInfo').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+}
 function renderSettings() {
+  renderKbInfo();
   const s = cfg.settings;
 document.querySelectorAll('#sFps button').forEach(b => b.classList.toggle('on', +b.dataset.fps === (s.fps || 20)));
   $('sExit').checked = s.restoreOnExit !== false; $('sPrev').checked = s.preview !== false;
@@ -722,6 +796,7 @@ document.querySelectorAll('#sFps button').forEach(b => b.classList.toggle('on', 
   $(id).onchange = () => { cfg.settings[key] = $(id).checked; save({ settings: { [key]: $(id).checked } }); if (key === 'preview') renderPreviewToggle(); };
 });
 $('sFps').onclick = e => { const f = +e.target.dataset.fps; if (!f) return; cfg.settings.fps = f; save({ settings: { fps: f } }); renderSettings(); };
+$('repo').onclick = () => api('open-repo');
 $('exp').onclick = async () => { const r = await api('export'); if (r.ok) toast('Exportado'); };
 $('imp').onclick = async () => { const r = await api('import'); if (r.ok) { cfg = r.cfg; renderAll(); toast('Importado'); } else if (r.detail) toast(r.detail, true); };
 function showUpd(u) { $('updText').textContent = u.text || ''; $('updInstall').hidden = u.state !== 'lista'; $('updCheck').disabled = u.state === 'dev' || u.state === 'buscando' || u.state === 'bajando'; }
@@ -737,7 +812,7 @@ async function setupMaybe() {
   setupOn = true; $('setup').classList.add('on'); showRows = Infinity; setTab(tab);
   await api('live', rowPattern(), 4);
 }
-function setupEnd() { setupOn = false; $('setup').classList.remove('on'); showRows = 0; cfg.setup = true; save({ setup: true }); setTab(tab); }
+function setupEnd() { setTimeout(renderKbInfo, 0); setupOn = false; $('setup').classList.remove('on'); showRows = 0; cfg.setup = true; save({ setup: true }); setTab(tab); }
 $('setupYes').onclick = () => { setupEnd(); restoreLights(); toast('Mapa de teclas confirmado'); };
 $('setupSkip').onclick = () => { setupEnd(); restoreLights(); toast('Puedes hacerlo luego en Ajustes → Mapa de teclas'); };
 $('setupNo').onclick = () => { setupEnd(); setTab('ajustes'); $('calStart').onclick(); };
@@ -746,7 +821,7 @@ $('calTest').onclick = async () => {
   const r = await api('live', rowPattern(), 4);
   if (report(r)) { toast('Durante 8 s: si el teclado se ve igual que el dibujo, el mapa está bien'); setTimeout(() => { if (!calib) restoreLights(); }, 8000); }
 };
-$('calReset').onclick = () => { cfg.map = { ...DEFAULT_MAP }; save({ map: cfg.map }); toast('Mapa estimado restaurado'); };
+$('calReset').onclick = () => { cfg.map = { ...DEFAULT_MAP }; save({ map: cfg.map }); renderKbInfo(); toast('Mapa estimado restaurado'); };
 function calibOrder() {
   const first = [], rest = [];
   for (let s = 0; s < SLOTS - 6; s++) { const r = Math.floor(s / GRID_COLS), c = s % GRID_COLS; (r >= 1 && c <= 14 ? first : rest).push(s); }
@@ -778,14 +853,14 @@ function calibEnd() {
 }
 function calibFinish() {
   const c = calib, missing = KEYS.filter(k => c.map[k.code] == null);
-  cfg.map = { ...c.map }; save({ map: cfg.map }); calibEnd();
+  cfg.map = { ...c.map }; save({ map: cfg.map }); calibEnd(); renderKbInfo();
   toast(missing.length ? `Mapa guardado; quedaron ${missing.length} teclas sin ubicar` : 'Mapa guardado: las 61 teclas ubicadas');
 }
 $('calStart').onclick = () => {
   if (link.state !== 'ok') { toast('Primero el teclado tiene que estar conectado y respondiendo', true); return; }
   if (document.activeElement) document.activeElement.blur();
   calib = { order: calibOrder(), i: 0, map: {}, hist: [], ready: false };
-  $('cal').classList.add('on'); kb.classList.add('pickable'); $('cal').scrollIntoView({ block: 'nearest' });
+  $('cal').classList.add('on'); kb.classList.add('pickable'); kb.scrollIntoView({ block: 'start', behavior: 'smooth' });
   calibShow();
 };
 $('calNone').onclick = () => { if (calib && calib.ready) { calib.hist.push(calib.i); calib.i++; calibShow(); } };
