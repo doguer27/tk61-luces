@@ -5,7 +5,7 @@ const HID = require('node-hid');
 const TK = require('./protocolo'), A = require('./animaciones');
 
 const VID = 0x0416, PID = 0xB23C, USAGE_PAGE = 0xFF1B, USAGE = 0x91, REPORT_LEN = 64;
-const SEED = 2;                        // version de los perfiles de fabrica
+const SEED = 3;                        // desde la 3 no hay perfiles de fabrica: solo los que guarda la persona
 const HIDDEN = process.argv.includes('--hidden');
 const ICON = path.join(__dirname, 'icono.png');
 // Solo en desarrollo: --shot=archivo.png [--tab=animaciones] captura la ventana y sale.
@@ -41,13 +41,20 @@ function seedProfiles() {
     { name: 'Apagado', kind: 'effect', data: fx(0, '#ffffff', '#000000', false, 0, 2, 0) },
   ].map(p => ({ id: uid(), ...p }));
 }
+const normData = (kind, d) => JSON.stringify(kind === 'anim' ? { id: d.id, bright: d.bright, params: { ...A.defaults(d.id), ...(d.params || {}) } } : d);
+function dropFactory(list) {
+  const factory = seedProfiles().filter(f => A.ANIMS[f.data.id] || f.kind !== 'anim');
+  return list.filter(p => !factory.some(f => f.name === p.name && f.kind === p.kind && (p.kind !== 'anim' || A.ANIMS[p.data.id]) && normData(f.kind, f.data) === normData(p.kind, p.data)));
+}
 function defaults() {
   return {
     map: { ...TK.DEFAULT_MAP },
     effect: fx(2, '#00d5ff', '#000000', true, 4, 2, 0),
     custom: { bright: 4, colors: all(k => TK.rgbToHex(TK.hsl(k.cx * 300))) },
     anim: { id: 'pong', bright: 4, params: A.defaults('pong') },
-    profiles: seedProfiles(),
+    profiles: [],
+    animParams: {},                  // opciones recordadas de cada animacion
+    setup: false,                    // ya se comprobo el mapa de teclas en el primer uso
     active: null,                    // id del perfil en uso (null = ajuste suelto)
     last: 'effect',                  // 'effect' | 'custom' | 'anim'
     seed: SEED,
@@ -65,11 +72,10 @@ function loadCfg() {
   cfg = { ...d, ...raw, settings: { ...d.settings, ...(raw.settings || {}) } };
   if (typeof cfg.last !== 'string') cfg.last = 'effect';
   cfg.custom = { bright: 4, ...cfg.custom, colors: { ...d.custom.colors, ...((raw.custom || {}).colors || {}) } };
-  const mine = Array.isArray(raw.profiles) && raw.profiles.some(p => p.id);
-  cfg.profiles = (mine ? raw.profiles : [...d.profiles, ...(raw.profiles || [])]).map(p => ({ id: p.id || uid(), ...p }));
-  if (mine && (raw.seed || 1) < 2) {            // quien viene de la 1.0 recibe los juegos nuevos junto al Pong
-    const have = new Set(cfg.profiles.map(p => p.name));
-    cfg.profiles.splice(1, 0, ...seedV2().filter(p => !have.has(p.name)).map(p => ({ id: uid(), ...p })));
+  cfg.profiles = (Array.isArray(raw.profiles) ? raw.profiles : []).filter(p => p && p.name && p.kind && p.data).map(p => ({ id: p.id || uid(), ...p }));
+  if ((raw.seed || 1) < 3) {
+    cfg.profiles = dropFactory(cfg.profiles);
+    if (!cfg.profiles.some(p => p.id === cfg.active)) cfg.active = null;
   }
   cfg.seed = SEED;
 }
@@ -223,6 +229,7 @@ function apply(kind, data, profileId = null) {
     else if (kind === 'custom') applyCustom(cfg.custom);
     else startAnim(cfg.anim);
     if (link.state !== 'ok' && kind !== 'anim') handshake();
+    refreshTray();
     return { ok: true };
   } catch (e) { return fail(e); }
 }
@@ -231,7 +238,8 @@ function applyProfile(p) {
   if (win) win.webContents.send('applied', { cfg });
   return r;
 }
-const lightsOff = () => { const r = apply('effect', { ...cfg.effect, bright: 0 }); if (win) win.webContents.send('applied', { cfg }); return r; };
+const applyLoose = (kind, data) => { const r = apply(kind, data); if (win) win.webContents.send('applied', { cfg }); return r; };
+const lightsOff = () => applyLoose('effect', { ...cfg.effect, bright: 0 });
 
 /* ------------------------------------------------ Ventana, bandeja, atajos ------------------------------------------------ */
 function showWindow() {
@@ -271,8 +279,8 @@ function refreshTray() {
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: estado, enabled: false },
     { type: 'separator' },
-    ...cfg.profiles.slice(0, 20).map(p => ({ label: p.name, type: 'radio', checked: cfg.active === p.id, click: () => applyProfile(p) })),
-    { type: 'separator' },
+    ...(cfg.profiles.length ? [...cfg.profiles.slice(0, 20).map(p => ({ label: p.name, type: 'checkbox', checked: cfg.active === p.id, click: () => applyProfile(p) })), { type: 'separator' }] : []),
+    { label: 'Animaciones', submenu: A.ORDER.map(id => ({ label: A.ANIMS[id].name, type: 'checkbox', checked: !!anim && anim.id === id, click: () => applyLoose('anim', { id, bright: cfg.anim.bright ?? 4, params: { ...A.defaults(id), ...((cfg.animParams || {})[id] || {}) } }) })) },
     { label: 'Apagar luces', click: lightsOff },
     { label: 'Abrir TK61 Luces', click: showWindow },
     { label: 'Salir', click: () => { quitting = true; app.quit(); } },
@@ -290,6 +298,16 @@ function applySettings() {
 /* ------------------------------------------------ Actualizaciones ------------------------------------------------ */
 let upd = { state: 'inactivo', text: '' }, updater = null;
 function setUpd(state, text) { upd = { state, text }; if (win) win.webContents.send('update', upd); }
+let prompted = '';
+const installUpdate = () => { if (updater && upd.state === 'lista') { quitting = true; updater.quitAndInstall(true, true); } };   // instala en silencio y reabre
+async function promptUpdate(version) {
+  if (prompted === version) return;
+  prompted = version;
+  const opts = { type: 'info', title: 'TK61 Luces', message: `Hay una versión nueva de TK61 Luces (${version})`,
+    detail: 'Ya está descargada. Instalarla tarda unos segundos y la app se vuelve a abrir sola.', buttons: ['Instalar ahora', 'Más tarde'], defaultId: 0, cancelId: 1, noLink: true };
+  const r = await (win && win.isVisible() ? dialog.showMessageBox(win, opts) : dialog.showMessageBox(opts));
+  if (r.response === 0) installUpdate();
+}
 function setupUpdater() {
   if (DEV) return setUpd('dev', 'Versión de desarrollo: no se actualiza sola.');
   try {
@@ -304,7 +322,7 @@ function setupUpdater() {
     updater.on('update-not-available', () => setUpd('al-dia', 'Tienes la última versión.'));
     updater.on('update-available', i => setUpd('bajando', `Descargando la versión ${i.version}…`));
     updater.on('download-progress', p => setUpd('bajando', `Descargando la actualización… ${Math.round(p.percent)} %`));
-    updater.on('update-downloaded', i => setUpd('lista', `La versión ${i.version} está lista: se instala al cerrar la app.`));
+    updater.on('update-downloaded', i => { setUpd('lista', `La versión ${i.version} está descargada y lista para instalar.`); promptUpdate(i.version); });
     updater.on('error', e => setUpd('error', 'No pude buscar actualizaciones: ' + (e.message || e).toString().split('\n')[0]));
     updater.checkForUpdates().catch(() => {});
   } catch (e) { setUpd('error', 'Actualizador no disponible: ' + e.message); }
@@ -314,7 +332,7 @@ function setupUpdater() {
 ipcMain.handle('init', () => ({ cfg, link, upd, version: app.getVersion(), packaged: app.isPackaged, animating: anim ? anim.id : null, visible: !!win && win.isVisible() }));
 ipcMain.handle('apply', (_e, kind, data, profileId) => apply(kind, data, profileId));
 ipcMain.handle('cfg', (_e, patch) => {
-  for (const k of ['map', 'profiles', 'effect', 'custom', 'anim', 'active', 'last']) if (k in patch) cfg[k] = patch[k];
+  for (const k of ['map', 'profiles', 'effect', 'custom', 'anim', 'animParams', 'active', 'last', 'setup']) if (k in patch) cfg[k] = patch[k];
   if (patch.settings) {
     cfg.settings = { ...cfg.settings, ...patch.settings }; applySettings();
     if ('fps' in patch.settings && anim) { clearInterval(anim.timer); anim.timer = setInterval(tick, frameMs()); }
@@ -334,7 +352,7 @@ ipcMain.handle('anim-params', (_e, params, bright) => {
 ipcMain.on('audio', (_e, a) => { audio = a && Array.isArray(a.bands) && a.bands.length === 15 ? { bands: a.bands.map(Number), bass: +a.bass || 0, t: Date.now() } : null; });
 ipcMain.handle('retry', () => { lastFail = 0; closeDev(); const ok = findInfo() ? handshake() : (setLink('sin'), false); if (ok) resumeLive(); return link; });
 ipcMain.handle('update-check', () => { if (updater) updater.checkForUpdates().catch(() => {}); else setupUpdater(); return upd; });
-ipcMain.handle('update-install', () => { if (updater && upd.state === 'lista') { quitting = true; updater.quitAndInstall(); } });
+ipcMain.handle('update-install', installUpdate);
 ipcMain.handle('export', async () => {
   const r = await dialog.showSaveDialog(win, { title: 'Exportar perfiles y ajustes', defaultPath: 'tk61-luces.json', filters: [{ name: 'JSON', extensions: ['json'] }] });
   if (r.canceled) return { ok: false };

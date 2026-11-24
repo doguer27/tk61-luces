@@ -32,16 +32,6 @@
   .banner b { color: #fff; }
 
   /* Barra de perfiles */
-  .pbar { display: flex; gap: 8px; align-items: center; margin: 0 0 14px; }
-  .plist { display: flex; gap: 8px; overflow-x: auto; padding: 3px 2px 7px; flex: 1; }
-  .pchip { display: flex; align-items: center; gap: 9px; padding: 6px 6px 6px 7px; border-radius: 11px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; flex: none; max-width: 230px; }
-  .pchip:hover { border-color: #3a4050; }
-  .pchip.mod { border-style: dashed; border-color: #6b7386; }
-  .pchip.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 20px -8px var(--accent); }
-  .pchip .sample { width: 30px; height: 22px; border-radius: 6px; border: 1px solid #ffffff22; flex: none; }
-  .pchip .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; font-size: 14px; }
-  .pchip .more { border: 0; background: none; color: var(--dim); cursor: pointer; padding: 2px 6px; border-radius: 6px; font-size: 16px; line-height: 1; }
-  .pchip .more:hover { background: var(--panel2); color: var(--text); }
   .menu { position: fixed; z-index: 20; min-width: 210px; padding: 6px; border-radius: 11px; background: #1b1e27; border: 1px solid var(--line); box-shadow: 0 18px 50px -12px #000; display: none; }
   .menu.on { display: block; }
   .menu button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 8px 11px; border-radius: 7px; cursor: pointer; }
@@ -63,7 +53,17 @@
   .kb.paused { opacity: .35; filter: saturate(.4); }
   .hint { text-align: center; color: var(--dim); font-size: 12.5px; margin: 12px 0 0; min-height: 18px; }
 
-  .tabs { display: flex; gap: 6px; margin: 18px 0 12px; padding: 5px; background: var(--panel); border: 1px solid var(--line); border-radius: 13px; width: max-content; }
+  .tabrow { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; flex-wrap: wrap; }
+  .banner.setup { background: #0f1c26; border-color: color-mix(in srgb, var(--accent) 55%, #1b2a36); color: var(--text); }
+  .profiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+  .prof { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 11px; border: 1px solid var(--line); background: var(--panel2); }
+  .prof.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 20px -8px var(--accent); }
+  .prof.mod { border-style: dashed; border-color: #6b7386; }
+  .prof .sample { width: 46px; height: 32px; border-radius: 7px; flex: none; border: 1px solid #ffffff22; }
+  .prof .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .prof .name small { display: block; color: var(--dim); font-weight: 400; font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+  .prof button { padding: 6px 11px; }
+  .tabs { display: flex; gap: 6px; margin: 0; padding: 5px; background: var(--panel); border: 1px solid var(--line); border-radius: 13px; width: max-content; }
   .tabs button { border: 0; background: none; padding: 8px 18px; border-radius: 9px; color: var(--dim); cursor: pointer; font-weight: 600; }
   .tabs button:hover { color: var(--text); }
   .tabs button.on { background: var(--panel2); color: var(--text); box-shadow: 0 0 0 1px var(--line); }
@@ -140,10 +140,11 @@
     <button class="btn" id="retry">Reintentar</button>
   </div>
 
-  <div class="pbar">
-    <div class="plist" id="plist"></div>
-    <button class="btn" id="pUpd" hidden></button>
-    <button class="btn primary" id="pAdd" title="Guarda lo que está puesto ahora como un perfil nuevo">＋ Guardar perfil</button>
+  <div class="banner setup" id="setup">
+    <p><b>Primer paso: comprobar tu teclado.</b> Sus luces deberían verse ahora igual que el dibujo: una fila de cada color (roja arriba, luego amarilla, verde, celeste y rosa). ¿Coincide?</p>
+    <button class="btn primary" id="setupYes">Sí, coincide</button>
+    <button class="btn" id="setupNo">No coincide</button>
+    <button class="btn" id="setupSkip">Ahora no</button>
   </div>
 
   <section class="stage">
@@ -151,12 +152,18 @@
     <p class="hint"><span id="hint"></span> <button class="link" id="pvToggle"></button></p>
   </section>
 
-  <nav class="tabs" id="tabs">
-    <button data-tab="efectos" class="on">Efectos</button>
-    <button data-tab="teclas">Por tecla</button>
-    <button data-tab="animaciones">Animaciones</button>
-    <button data-tab="ajustes">Ajustes</button>
-  </nav>
+  <div class="tabrow">
+    <nav class="tabs" id="tabs">
+      <button data-tab="efectos" class="on">Efectos</button>
+      <button data-tab="teclas">Por tecla</button>
+      <button data-tab="animaciones">Animaciones</button>
+      <button data-tab="perfiles">Mis perfiles</button>
+      <button data-tab="ajustes">Ajustes</button>
+    </nav>
+    <span style="flex:1"></span>
+    <button class="btn" id="pUpd" hidden></button>
+    <button class="btn" id="pAdd" title="Guarda lo que tienes puesto ahora para volver a ello con un clic">＋ Guardar como perfil</button>
+  </div>
 
   <section class="panel on" data-panel="efectos">
     <h2>Efecto del teclado</h2>
@@ -236,6 +243,12 @@
       </div>
     </div>
     <p style="margin:6px 0 0">Las animaciones las dibuja esta app, no el teclado: necesitan que siga abierta (puede quedarse en la bandeja, junto al reloj). No gastan la memoria del teclado.</p>
+  </section>
+
+  <section class="panel" data-panel="perfiles">
+    <h2>Mis perfiles</h2>
+    <p>Un perfil guarda lo que tengas puesto (un efecto, tus colores por tecla o una animación con sus opciones) para volver a ello con un clic, también desde el icono de la bandeja.</p>
+    <div class="profiles" id="plist"></div>
   </section>
 
   <section class="panel" data-panel="ajustes">
@@ -339,6 +352,7 @@ function showLink(l) {
   if (l.state === 'mudo') { b.classList.add('on'); $('bannerText').innerHTML = '<b>El teclado está conectado pero no acepta órdenes.</b> Suele ser el puerto USB del PC: cambia el teclado (o su hub) a otro puerto y pulsa Reintentar.'; }
   else if (l.state === 'sin') { b.classList.add('on'); $('bannerText').innerHTML = '<b>No encuentro el TK61.</b> Conéctalo por cable USB. La vista previa sigue funcionando.'; }
   else b.classList.remove('on');
+  setupMaybe();
 }
 $('retry').onclick = async () => { showLink({ state: 'buscando' }); showLink(await api('retry')); };
 function report(r, okMsg) {
@@ -412,7 +426,8 @@ function paintKey(k, c) {
 const ROW_COLORS = ['#ff0000', '#ffd000', '#00ff40', '#00d0ff', '#ff00d0'];
 let lastMs = 0, showRows = 0, visible = true, looping = false;
 // La vista previa se dibuja a ~30 cuadros/s y solo mientras la ventana se ve.
-const previewOn = () => cfg.settings.preview !== false || !!calib || tab === 'teclas';     // pintar y calibrar siempre se ven
+let setupOn = false;
+const previewOn = () => !!cfg && (cfg.settings.preview !== false || !!calib || setupOn || tab === 'teclas');     // pintar y calibrar siempre se ven
 function loop() { if (!looping && visible && previewOn()) { looping = true; requestAnimationFrame(frame); } }
 function renderPreviewToggle() {
   const on = cfg.settings.preview !== false;
@@ -458,7 +473,7 @@ function setTab(t) {
   $('hint').textContent = t === 'efectos' ? 'Vista aproximada: el efecto real lo genera el propio teclado.'
     : t === 'teclas' ? 'Haz clic o arrastra sobre las teclas para pintarlas: se ve al instante en el teclado.'
     : t === 'animaciones' ? (animating === cfg.anim.id ? 'En vivo: esto es lo que está recibiendo el teclado.' : 'Vista previa. Elige una animación para ponerla en el teclado.')
-    : 'Lo último que aplicaste.';
+    : setupOn ? 'Así debe verse tu teclado ahora.' : 'Lo último que aplicaste.';
 }
 $('tabs').onclick = e => { if (e.target.dataset.tab) setTab(e.target.dataset.tab); };
 
@@ -474,24 +489,27 @@ const kindName = p => p.kind === 'custom' ? 'Por tecla' : p.kind === 'anim' ? 'A
 function renderProfiles() {
   const box = $('plist'); box.innerHTML = '';
   cfg.profiles.forEach((p, i) => {
-    const d = document.createElement('div'); d.className = 'pchip' + (cfg.active === p.id ? ' on' : editing === p.id ? ' mod' : ''); d.title = kindName(p) + (i < 9 ? ` · atajo ${i + 1}` : '');
+    const d = document.createElement('div'); d.className = 'prof' + (cfg.active === p.id ? ' on' : editing === p.id ? ' mod' : '');
     const s = document.createElement('div'); s.className = 'sample'; s.style.background = sampleCss(p);
-    const n = document.createElement('div'); n.className = 'nm'; n.textContent = p.name;
-    const m = document.createElement('button'); m.className = 'more'; m.textContent = '⋯'; m.title = 'Opciones';
+    const n = document.createElement('div'); n.className = 'name'; n.textContent = p.name;
+    const sm = document.createElement('small'); sm.textContent = kindName(p) + (i < 9 ? ` · atajo ${i + 1}` : ''); n.appendChild(sm);
+    const u = document.createElement('button'); u.className = 'btn'; u.textContent = cfg.active === p.id ? 'En uso' : 'Usar'; u.onclick = () => useProfile(p);
+    const m = document.createElement('button'); m.className = 'btn'; m.textContent = '⋯'; m.title = 'Opciones';
     m.onclick = e => { e.stopPropagation(); profileMenu(p, i, m); };
-    d.onclick = () => useProfile(p);
-    d.ondblclick = () => renameProfile(p);
+    n.ondblclick = () => renameProfile(p);
     d.oncontextmenu = e => { e.preventDefault(); profileMenu(p, i, m); };
-    d.append(s, n, m); box.appendChild(d);
+    d.append(s, n, u, m); box.appendChild(d);
   });
   const ed = cfg.active == null && cfg.profiles.find(p => p.id === editing);
   $('pUpd').hidden = !ed; if (ed) $('pUpd').textContent = `Guardar cambios en «${ed.name}»`;
-  if (!cfg.profiles.length) box.innerHTML = '<span style="color:var(--dim);padding:8px">Aún no hay perfiles: deja las luces a tu gusto y pulsa «Guardar como perfil».</span>';
+  if (!cfg.profiles.length) box.innerHTML = '<p style="margin:0">Todavía no tienes ninguno. Deja las luces a tu gusto en Efectos, Por tecla o Animaciones y pulsa «＋ Guardar como perfil».</p>';
 }
+// Si estas en una pestaña de edicion, salta a la que corresponde a lo aplicado; en Mis perfiles o Ajustes te quedas donde estas
+function followKind() { setTab(['efectos', 'teclas', 'animaciones'].includes(tab) ? (cfg.last === 'effect' ? 'efectos' : cfg.last === 'custom' ? 'teclas' : 'animaciones') : tab); }
 async function useProfile(p) {
   editing = p.id;
   cfg[p.kind] = clone(p.data); cfg.last = p.kind; cfg.active = p.id; animating = p.kind === 'anim' ? p.data.id : null;
-  renderAll(); setTab(p.kind === 'effect' ? 'efectos' : p.kind === 'custom' ? 'teclas' : 'animaciones');
+  renderAll(); followKind();
   report(await api('apply', p.kind, p.data, p.id), p.name);
   setDirty(false);
 }
@@ -522,7 +540,7 @@ $('pAdd').onclick = async () => {
   const sug = k === 'anim' ? ANIM.ANIMS[cfg.anim.id].name : k === 'effect' ? (EFFECTS.find(x => x.id === cfg.effect.id) || {}).name : 'Mis colores';
   const name = await ask('Nombre del perfil nuevo', sug); if (!name) return;
   const p = { id: Math.random().toString(36).slice(2, 10), name, kind: k, data: clone(cfg[k]) };
-  cfg.profiles.unshift(p); cfg.active = p.id; editing = p.id; saveProfiles(); toast('Perfil guardado');
+  cfg.profiles.unshift(p); cfg.active = p.id; editing = p.id; saveProfiles(); toast('Perfil guardado en «Mis perfiles»');
 };
 
 /* ---------- Efectos ---------- */
@@ -619,7 +637,7 @@ $('applyCustom').onclick = () => applyKind('custom', 'Guardado en el teclado');
 /* ---------- Animaciones ---------- */
 let animSave;
 function animChanged(restart) {
-  clearTimeout(animSave); animSave = setTimeout(() => save({ anim: cfg.anim }), 300);
+  clearTimeout(animSave); animSave = setTimeout(() => { cfg.animParams = { ...(cfg.animParams || {}), [cfg.anim.id]: cfg.anim.params }; save({ anim: cfg.anim, animParams: cfg.animParams }); }, 300);
   if (restart || animating !== cfg.anim.id) applyKind('anim', ANIM.ANIMS[cfg.anim.id].name);
   else { cfg.active = null; renderProfiles(); api('anim-params', cfg.anim.params, cfg.anim.bright); }
 }
@@ -630,7 +648,11 @@ function renderAnims() {
   ANIM.ORDER.forEach(id => {
     const x = ANIM.ANIMS[id], b = document.createElement('button'); b.className = 'chip' + (id === a.id ? ' on' : '');
     b.innerHTML = `<b>${x.name}</b><small>${x.desc}</small>`;
-    b.onclick = () => { cfg.anim = { id, bright: a.bright, params: ANIM.defaults(id) }; localAnim = null; renderAnims(); animChanged(true); setTab('animaciones'); };
+    b.onclick = () => {
+      cfg.animParams = { ...(cfg.animParams || {}), [a.id]: a.params };
+      cfg.anim = { id, bright: a.bright, params: { ...ANIM.defaults(id), ...(cfg.animParams[id] || {}) } };
+      localAnim = null; renderAnims(); animChanged(true); setTab('animaciones');
+    };
     $('anims').appendChild(b);
   });
   $('abright').value = a.bright; $('abrightOut').textContent = brightText(a.bright);
@@ -708,9 +730,20 @@ $('updInstall').onclick = () => api('update-install');
 
 /* ---------- Calibración (todo en vivo, sin gastar la memoria del teclado) ---------- */
 const restoreLights = () => api('apply', cfg.last, cfg[cfg.last], cfg.active);
+const rowPattern = () => Object.fromEntries(KEYS.map(k => [k.code, ROW_COLORS[k.row]]));
+// Primer uso: antes de nada, comprobar que cada tecla se enciende donde debe
+async function setupMaybe() {
+  if (!cfg || cfg.setup || setupOn || calib || link.state !== 'ok') return;
+  setupOn = true; $('setup').classList.add('on'); showRows = Infinity; setTab(tab);
+  await api('live', rowPattern(), 4);
+}
+function setupEnd() { setupOn = false; $('setup').classList.remove('on'); showRows = 0; cfg.setup = true; save({ setup: true }); setTab(tab); }
+$('setupYes').onclick = () => { setupEnd(); restoreLights(); toast('Mapa de teclas confirmado'); };
+$('setupSkip').onclick = () => { setupEnd(); restoreLights(); toast('Puedes hacerlo luego en Ajustes → Mapa de teclas'); };
+$('setupNo').onclick = () => { setupEnd(); setTab('ajustes'); $('calStart').onclick(); };
 $('calTest').onclick = async () => {
   showRows = performance.now() + 8000;
-  const r = await api('live', Object.fromEntries(KEYS.map(k => [k.code, ROW_COLORS[k.row]])), 4);
+  const r = await api('live', rowPattern(), 4);
   if (report(r)) { toast('Durante 8 s: si el teclado se ve igual que el dibujo, el mapa está bien'); setTimeout(() => { if (!calib) restoreLights(); }, 8000); }
 };
 $('calReset').onclick = () => { cfg.map = { ...DEFAULT_MAP }; save({ map: cfg.map }); toast('Mapa estimado restaurado'); };
@@ -782,7 +815,7 @@ window.tk61.on('frame', f => { mainFrame = f; });
 window.tk61.on('update', showUpd);
 window.tk61.on('applied', d => {        // perfil puesto desde la bandeja o un atajo
   cfg = d.cfg; editing = cfg.active; animating = cfg.last === 'anim' ? cfg.anim.id : null; localAnim = null; setDirty(false);
-  renderAll(); setTab(cfg.last === 'effect' ? 'efectos' : cfg.last === 'custom' ? 'teclas' : 'animaciones');
+  renderAll(); followKind();
 });
 (async () => {
   const init = await api('init');
@@ -793,7 +826,7 @@ window.tk61.on('applied', d => {        // perfil puesto desde la bandeja o un a
   $('ver').textContent = 'Versión ' + init.version;
   $('brush').value = brush; $('brush2').value = brush2;
   const want = location.hash.slice(1);
-  setTab(['efectos', 'teclas', 'animaciones', 'ajustes'].includes(want) ? want : cfg.last === 'custom' ? 'teclas' : cfg.last === 'anim' ? 'animaciones' : 'efectos');
+  setTab(['efectos', 'teclas', 'animaciones', 'perfiles', 'ajustes'].includes(want) ? want : cfg.last === 'custom' ? 'teclas' : cfg.last === 'anim' ? 'animaciones' : 'efectos');
   loop();
 })();
 </script>
