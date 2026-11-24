@@ -1,0 +1,91 @@
+{
+  "name": "tk61-luces",
+  "version": "1.1.0",
+  "description": "Control de luces RGB, animaciones y juegos para el teclado Tezarre TK61",
+  "main": "app/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test-protocolo.js",
+    "dist": "electron-builder --win nsis --publish never"
+  },
+  "author": "doguer27",
+  "type": "commonjs",
+  "dependencies": {
+    "electron-updater": "^6.8.11",
+    "node-hid": "^3.4.0"
+  },
+  "devDependencies": {
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
+  },
+  "productName": "TK61 Luces",
+  "build": {
+    "appId": "com.tk61.luces",
+    "productName": "TK61 Luces",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "app/**/*",
+      "package.json",
+      "!node_modules/node-hid/prebuilds/{HID-darwin*,HID-linux*,HID_hidraw*,HID-win32-arm64,HID-win32-ia32}/**",
+      "!node_modules/node-hid/{hidapi,src,binding.gyp,*.md}",
+      "!node_modules/**/*.{md,map,ts}"
+    ],
+    "asarUnpack": [
+      "node_modules/node-hid/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "TK61 Luces",
+      "runAfterFinish": true,
+      "artifactName": "TK61-Luces-Setup-${version}.${ext}",
+      "language": "3082"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "doguer27",
+        "repo": "tk61-luces",
+        "releaseType": "release"
+      }
+    ],
+    "npmRebuild": false,
+    "nodeGypRebuild": false,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
+    "copyright": "Copyright © 2026 doguer27 — GPL-2.0-or-later",
+    "electronLanguages": [
+      "es",
+      "en-US"
+    ],
+    "compression": "maximum"
+  },
+  "license": "GPL-2.0-or-later",
+  "homepage": "https://github.com/doguer27/tk61-luces",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/doguer27/tk61-luces.git"
+  }
+}

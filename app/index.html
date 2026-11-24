@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>TK61 Luces</title>
+<style>
+  :root {
+    --bg: #0b0c10; --panel: #13151b; --panel2: #191c24; --line: #262a35; --text: #e8eaf0; --dim: #8b91a1;
+    --accent: #00d5ff; --u: min(60px, calc((100vw - 96px) / 15)); --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+  body { min-height: 100vh; background: radial-gradient(1200px 500px at 50% -120px, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%), var(--bg); }
+  button, input, select { font: inherit; color: inherit; }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 24px 56px; }
+  ::-webkit-scrollbar { width: 10px; height: 8px; } ::-webkit-scrollbar-thumb { background: #2a2e3a; border-radius: 5px; }
+
+  header { max-width: 1080px; margin: 0 auto; padding: 18px 24px 12px; display: flex; align-items: center; gap: 16px; }
+  header h1 { font-size: 20px; font-weight: 650; letter-spacing: .2px; margin: 0; }
+  header h1 span { color: var(--dim); font-weight: 400; }
+  .pill { margin-left: auto; display: flex; align-items: center; gap: 9px; padding: 7px 14px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-size: 13px; color: var(--dim); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #5a6070; flex: none; }
+  .pill[data-s="ok"] .dot { background: #35e08a; box-shadow: 0 0 10px #35e08a; }
+  .pill[data-s="mudo"] .dot { background: #ffb020; box-shadow: 0 0 10px #ffb020; }
+  .pill[data-s="sin"] .dot { background: #ff4d5e; }
+  .pill[data-s="ok"] { color: var(--text); }
+
+  .banner { display: none; margin: 0 0 14px; padding: 14px 16px; border-radius: var(--radius); background: #2a2110; border: 1px solid #6b4e12; color: #ffdf9c; gap: 14px; align-items: center; }
+  .banner.on { display: flex; }
+  .banner p { margin: 0; flex: 1; }
+  .banner b { color: #fff; }
+
+  /* Barra de perfiles */
+  .pbar { display: flex; gap: 8px; align-items: center; margin: 0 0 14px; }
+  .plist { display: flex; gap: 8px; overflow-x: auto; padding: 3px 2px 7px; flex: 1; }
+  .pchip { display: flex; align-items: center; gap: 9px; padding: 6px 6px 6px 7px; border-radius: 11px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; flex: none; max-width: 230px; }
+  .pchip:hover { border-color: #3a4050; }
+  .pchip.mod { border-style: dashed; border-color: #6b7386; }
+  .pchip.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 20px -8px var(--accent); }
+  .pchip .sample { width: 30px; height: 22px; border-radius: 6px; border: 1px solid #ffffff22; flex: none; }
+  .pchip .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; font-size: 14px; }
+  .pchip .more { border: 0; background: none; color: var(--dim); cursor: pointer; padding: 2px 6px; border-radius: 6px; font-size: 16px; line-height: 1; }
+  .pchip .more:hover { background: var(--panel2); color: var(--text); }
+  .menu { position: fixed; z-index: 20; min-width: 210px; padding: 6px; border-radius: 11px; background: #1b1e27; border: 1px solid var(--line); box-shadow: 0 18px 50px -12px #000; display: none; }
+  .menu.on { display: block; }
+  .menu button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 8px 11px; border-radius: 7px; cursor: pointer; }
+  .menu button:hover { background: var(--panel2); }
+  .menu button.danger:hover { color: #ff8b96; }
+  .menu hr { border: 0; border-top: 1px solid var(--line); margin: 5px 0; }
+
+  .stage { padding: 24px 0 18px; border-radius: 22px; background: linear-gradient(#15171e, #0e0f14); border: 1px solid var(--line); box-shadow: 0 30px 80px -40px #000; }
+  .kb { width: calc(var(--u) * 15); margin: 0 auto; user-select: none; touch-action: none; }
+  .row { display: flex; }
+  .key { --c: #000; --l: #4b5160; height: calc(var(--u) - 6px); margin: 3px; border-radius: 9px; flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: calc(var(--u) * .22); font-weight: 600; letter-spacing: .3px;
+    background: linear-gradient(#20232c, #15171d); color: var(--l); text-shadow: 0 0 9px var(--c);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 60%, #2a2e3a), 0 0 16px -3px var(--c), inset 0 -3px 0 #0c0d11; cursor: default; }
+  .kb.paint .key { cursor: crosshair; }
+  .kb.pickable .key { cursor: pointer; }
+  .key.done { outline: 2px solid #35e08a; outline-offset: -2px; }
+  .hint { text-align: center; color: var(--dim); font-size: 12.5px; margin: 12px 0 0; min-height: 18px; }
+
+  .tabs { display: flex; gap: 6px; margin: 18px 0 12px; padding: 5px; background: var(--panel); border: 1px solid var(--line); border-radius: 13px; width: max-content; }
+  .tabs button { border: 0; background: none; padding: 8px 18px; border-radius: 9px; color: var(--dim); cursor: pointer; font-weight: 600; }
+  .tabs button:hover { color: var(--text); }
+  .tabs button.on { background: var(--panel2); color: var(--text); box-shadow: 0 0 0 1px var(--line); }
+
+  .panel { display: none; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+  .panel.on { display: block; }
+  .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--dim); margin: 0 0 12px; font-weight: 600; }
+  .panel h2:not(:first-child) { margin-top: 26px; }
+  .panel p { color: var(--dim); margin: 0 0 12px; max-width: 76ch; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 36px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 9px; }
+  .chip { text-align: left; padding: 11px 13px; border-radius: 11px; border: 1px solid var(--line); background: var(--panel2); cursor: pointer; }
+  .chip b { display: block; font-weight: 600; }
+  .chip small { color: var(--dim); font-size: 12px; display: block; line-height: 1.3; margin-top: 2px; }
+  .chip:hover { border-color: #3a4050; }
+  .chip.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 22px -8px var(--accent); }
+
+  .field { margin-bottom: 18px; }
+  .field > label, .lbl { display: flex; justify-content: space-between; font-size: 13px; color: var(--dim); margin-bottom: 8px; }
+  .field > label output { color: var(--text); font-weight: 600; }
+  .field.off { opacity: .35; pointer-events: none; }
+  input[type=range] { width: 100%; accent-color: var(--accent); height: 24px; margin: 0; }
+  .colorrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  input[type=color] { width: 46px; height: 36px; padding: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--panel2); cursor: pointer; }
+  input[type=color]::-webkit-color-swatch-wrapper { padding: 4px; }
+  input[type=color]::-webkit-color-swatch { border: 0; border-radius: 6px; }
+  .sw { width: 24px; height: 24px; border-radius: 7px; border: 1px solid #ffffff2a; cursor: pointer; padding: 0; }
+  .sw:hover { transform: scale(1.15); }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button, .btn { padding: 8px 13px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel2); cursor: pointer; font-weight: 550; }
+  .seg button:hover, .btn:hover { border-color: #3a4050; }
+  .seg button.on { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #06121a; font-weight: 700; }
+  .btn.primary:hover { filter: brightness(1.1); }
+  .btn.danger:hover { border-color: #ff4d5e; color: #ff8b96; }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .field > label.toggle, .toggle { display: flex; justify-content: flex-start; align-items: center; gap: 10px; cursor: pointer; color: var(--text); font-size: 15px; margin: 0; }
+  .toggle input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  .toggle small { color: var(--dim); display: block; font-size: 12.5px; }
+  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 18px; }
+  .dirty { color: #ffb020; font-size: 13px; }
+  .setrow { padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .setrow:last-of-type { border-bottom: 0; }
+  input[type=text] { padding: 9px 12px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel2); min-width: 260px; }
+  input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+  .cal { display: none; margin-top: 12px; padding: 16px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); }
+  .cal.on { display: block; }
+  .cal .big { font-size: 17px; color: var(--text); margin-bottom: 4px; }
+  .bar { height: 6px; border-radius: 3px; background: #0c0d11; margin: 12px 0; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .15s; }
+
+  dialog { border: 1px solid var(--line); border-radius: 14px; background: #171a22; color: var(--text); padding: 20px; min-width: 340px; box-shadow: 0 30px 90px -20px #000; }
+  dialog::backdrop { background: #000a; }
+  dialog h3 { margin: 0 0 12px; font-size: 16px; }
+  dialog input { width: 100%; }
+
+  #toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 20px); padding: 10px 18px; border-radius: 11px; background: #1f232d; border: 1px solid var(--line); opacity: 0; transition: .2s; pointer-events: none; box-shadow: 0 12px 40px -10px #000; z-index: 30; }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
+  #toast.err { border-color: #7a2630; color: #ffb3bb; }
+</style>
+</head>
+<body>
+<header>
+  <h1>TK61 <span>· Luces</span></h1>
+  <div class="pill" id="pill" data-s="buscando"><i class="dot"></i><span id="pillText">Buscando el teclado…</span></div>
+</header>
+
+<main>
+  <div class="banner" id="banner">
+    <p id="bannerText"></p>
+    <button class="btn" id="retry">Reintentar</button>
+  </div>
+
+  <div class="pbar">
+    <div class="plist" id="plist"></div>
+    <button class="btn" id="pUpd" hidden></button>
+    <button class="btn primary" id="pAdd" title="Guarda lo que está puesto ahora como un perfil nuevo">＋ Guardar perfil</button>
+  </div>
+
+  <section class="stage">
+    <div class="kb" id="kb"></div>
+    <p class="hint" id="hint"></p>
+  </section>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="efectos" class="on">Efectos</button>
+    <button data-tab="teclas">Por tecla</button>
+    <button data-tab="animaciones">Animaciones</button>
+    <button data-tab="ajustes">Ajustes</button>
+  </nav>
+
+  <section class="panel on" data-panel="efectos">
+    <h2>Efecto del teclado</h2>
+    <div class="chips" id="effects"></div>
+    <div class="grid2" style="margin-top:24px">
+      <div>
+        <div class="field" id="fC1">
+          <div class="lbl"><span>Color principal</span></div>
+          <div class="colorrow"><input type="color" id="c1"><span class="colorrow" data-sw="c1"></span></div>
+        </div>
+        <div class="field" id="fC2">
+          <div class="lbl"><span>Color de fondo</span></div>
+          <div class="colorrow"><input type="color" id="c2"><span class="colorrow" data-sw="c2"></span></div>
+        </div>
+        <div class="field" id="fMulti">
+          <label class="toggle"><input type="checkbox" id="multi"> Multicolor (el teclado elige los colores)</label>
+        </div>
+      </div>
+      <div>
+        <div class="field"><label>Brillo <output id="brightOut"></output></label><input type="range" id="bright" min="0" max="4" step="1"></div>
+        <div class="field" id="fSpeed"><label>Velocidad <output id="speedOut"></output></label><input type="range" id="speed" min="0" max="4" step="1"></div>
+        <div class="field" id="fDir"><div class="lbl"><span>Dirección</span></div><div class="seg" id="dir"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" data-panel="teclas">
+    <div class="grid2">
+      <div>
+        <h2>Pincel</h2>
+        <div class="field">
+          <div class="colorrow"><input type="color" id="brush"><span class="colorrow" data-sw="brush"></span></div>
+        </div>
+        <div class="seg" id="tool">
+          <button data-tool="pintar" class="on">Pintar</button>
+          <button data-tool="borrar">Apagar tecla</button>
+          <button data-tool="gotero">Tomar color</button>
+        </div>
+        <div class="field" style="margin-top:20px"><label>Brillo <output id="cbrightOut"></output></label><input type="range" id="cbright" min="0" max="4" step="1"></div>
+      </div>
+      <div>
+        <h2>Rellenos rápidos</h2>
+        <div class="field">
+          <div class="lbl"><span>Segundo color (para degradados y mezclas)</span></div>
+          <div class="colorrow"><input type="color" id="brush2"><span class="colorrow" data-sw="brush2"></span></div>
+        </div>
+        <div class="seg" id="fills">
+          <button data-fill="todo">Todo de un color</button>
+          <button data-fill="gradH">Degradado ↔</button>
+          <button data-fill="gradV">Degradado ↕</button>
+          <button data-fill="gradD">Degradado ⤡</button>
+          <button data-fill="arcoH">Arcoíris ↔</button>
+          <button data-fill="arcoD">Arcoíris ⤡</button>
+          <button data-fill="filas">Por filas</button>
+          <button data-fill="letras">Letras / resto</button>
+          <button data-fill="wasd">WASD</button>
+          <button data-fill="flechas">IJKL</button>
+          <button data-fill="azar">Aleatorio</button>
+          <button data-fill="apagar">Apagar todo</button>
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="applyCustom">Guardar en el teclado</button>
+      <span class="dirty" id="dirty" hidden>Lo ves en el teclado, pero aún no está guardado: se pierde al desenchufarlo</span>
+    </div>
+  </section>
+
+  <section class="panel" data-panel="animaciones">
+    <h2>Animación</h2>
+    <div class="chips" id="anims"></div>
+    <div class="grid2" style="margin-top:24px">
+      <div id="animColors"></div>
+      <div>
+        <div class="field"><label>Brillo <output id="abrightOut"></output></label><input type="range" id="abright" min="0" max="4" step="1"></div>
+        <div id="animRanges"></div>
+      </div>
+    </div>
+    <p style="margin:6px 0 0">Las animaciones las dibuja esta app, no el teclado: necesitan que siga abierta (puede quedarse en la bandeja, junto al reloj). No gastan la memoria del teclado.</p>
+  </section>
+
+  <section class="panel" data-panel="ajustes">
+    <h2>Arranque</h2>
+    <div class="setrow"><label class="toggle"><input type="checkbox" id="sAuto"><span>Abrir al iniciar Windows<small>Arranca escondida en la bandeja.</small></span></label></div>
+    <div class="setrow"><label class="toggle"><input type="checkbox" id="sTray"><span>Seguir en la bandeja al cerrar la ventana<small>Hace falta para que las animaciones sigan corriendo.</small></span></label></div>
+    <div class="setrow"><label class="toggle"><input type="checkbox" id="sRestore"><span>Retomar la animación al abrir o al reconectar el teclado</span></label></div>
+    <div class="setrow"><label class="toggle"><input type="checkbox" id="sKeys"><span>Atajos de teclado para los perfiles<small>Ctrl + Alt + Shift + 1…9 pone el perfil de esa posición; con 0 apaga las luces. Funcionan desde cualquier programa.</small></span></label></div>
+
+    <h2>Animaciones</h2>
+    <div class="field" style="margin-bottom:6px"><div class="lbl"><span>Fluidez (cuadros por segundo)</span></div>
+      <div class="seg" id="sFps"><button data-fps="12">Suave para el USB · 12</button><button data-fps="20">Normal · 20</button><button data-fps="30">Muy fluida · 30</button></div></div>
+    <p>Cada cuadro son datos que viajan por USB. Si el ratón da tirones estando en el mismo hub que el teclado, baja esto.</p>
+
+    <h2>Mapa de teclas</h2>
+    <p>El teclado recibe los colores por posición interna, y la de cada tecla de este modelo no está documentada: viene un mapa estimado. Afecta a «Por tecla» y a las animaciones; los efectos no lo usan.</p>
+    <div class="actions" style="margin-top:0">
+      <button class="btn" id="calTest">Probar mapa (una fila de cada color)</button>
+      <button class="btn primary" id="calStart">Calibración guiada</button>
+      <button class="btn danger" id="calReset">Volver al mapa estimado</button>
+    </div>
+    <div class="cal" id="cal">
+      <div class="big" id="calBig"></div>
+      <div id="calSub" style="color:var(--dim)"></div>
+      <div class="bar"><i id="calBar"></i></div>
+      <div class="actions" style="margin-top:0">
+        <button class="btn" id="calNone">No se encendió ninguna</button>
+        <button class="btn" id="calBack">Atrás</button>
+        <button class="btn primary" id="calDone">Terminar y guardar</button>
+        <button class="btn danger" id="calCancel">Cancelar</button>
+      </div>
+    </div>
+
+    <h2>Copia de seguridad</h2>
+    <div class="actions" style="margin-top:0">
+      <button class="btn" id="exp">Exportar perfiles y ajustes…</button>
+      <button class="btn" id="imp">Importar…</button>
+    </div>
+
+    <h2>Actualizaciones</h2>
+    <p id="updText" style="color:var(--text)"></p>
+    <div class="actions" style="margin-top:0">
+      <button class="btn" id="updCheck">Buscar ahora</button>
+      <button class="btn primary" id="updInstall" hidden>Reiniciar e instalar</button>
+      <span style="color:var(--dim);font-size:13px" id="ver"></span>
+    </div>
+  </section>
+</main>
+
+<div class="menu" id="menu"></div>
+<dialog id="ask"><form method="dialog"><h3 id="askTitle"></h3><input type="text" id="askInput" maxlength="40"><div class="actions"><button class="btn primary" value="ok">Aceptar</button><button class="btn" value="no">Cancelar</button></div></form></dialog>
+<div id="toast"></div>
+
+<script src="protocolo.js"></script>
+<script src="animaciones.js"></script>
+<script>
+'use strict';
+const { KEYS, KEY, ROWS, hexToRgb, rgbToHex, hsl, mix, lerpHex, DEFAULT_MAP, SLOTS, GRID_COLS } = TK;
+const api = (name, ...a) => window.tk61.call(name, ...a);
+const $ = id => document.getElementById(id);
+const clone = o => JSON.parse(JSON.stringify(o));
+const LETTERS = new Set(KEYS.filter(k => /^(Key|Digit)/.test(k.code)).map(k => k.code));
+const PALETTE = ['#ff0000', '#ff6a00', '#ffd000', '#7dff00', '#00ff6a', '#00e5ff', '#0066ff', '#7a00ff', '#ff00c8', '#ffffff', '#000000'];
+const EFFECTS = [
+  { id: 0, name: 'Estático', desc: 'Un color fijo', color: 1 },
+  { id: 1, name: 'Respiración', desc: 'Sube y baja suave', color: 2, speed: 1 },
+  { id: 2, name: 'Ola', desc: 'Barrido de color', color: 2, speed: 1, dirs: [[0, '→'], [1, '←'], [2, '↑'], [3, '↓'], [4, 'Hacia afuera'], [5, 'Hacia adentro']] },
+  { id: 3, name: 'Neón', desc: 'Ciclo de colores', color: 2, speed: 1 },
+  { id: 5, name: 'Serpiente', desc: 'Recorre el teclado', color: 2, speed: 1, dirs: [[6, '↻ Horario'], [7, '↺ Antihorario']] },
+  { id: 6, name: 'Reactivo', desc: 'Se enciende al teclear', color: 2, speed: 1 },
+  { id: 7, name: 'Aurora', desc: 'Destello al teclear', color: 2, speed: 1, dirs: [[4, 'Hacia afuera'], [5, 'Hacia adentro']] },
+  { id: 8, name: 'Onda', desc: 'Onda al teclear', color: 2, speed: 1 },
+];
+const BR = [0, .3, .55, .78, 1];
+const brightText = b => b === 0 ? 'Apagado' : b + ' de 4';
+
+let cfg = null, link = { state: 'buscando' }, tab = 'efectos', tool = 'pintar', brush = '#00e5ff', brush2 = '#ff00c8', dirty = false;
+let calib = null, mainFrame = null, animating = null, localAnim = null;
+let editing = null;                 // perfil del que partiste: si lo retocas, se ofrece guardar los cambios en el
+
+let toastTimer;
+function toast(msg, err) { const t = $('toast'); t.textContent = msg; t.className = 'on' + (err ? ' err' : ''); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = '', err ? 5000 : 1600); }
+function ask(title, value = '') {
+  return new Promise(res => {
+    const d = $('ask'); $('askTitle').textContent = title; $('askInput').value = value;
+    d.onclose = () => res(d.returnValue === 'ok' ? $('askInput').value.trim() : null);
+    d.showModal(); $('askInput').select();
+  });
+}
+const save = patch => api('cfg', patch);
+const kindOfTab = () => tab === 'efectos' ? 'effect' : tab === 'teclas' ? 'custom' : tab === 'animaciones' ? 'anim' : cfg.last;
+
+/* ---------- Conexión ---------- */
+function showLink(l) {
+  link = l;
+  const text = { ok: 'Conectado' + (l.version ? ' · firmware ' + l.version : ''), mudo: 'No responde', sin: 'Sin teclado', buscando: 'Buscando el teclado…' }[l.state];
+  $('pill').dataset.s = l.state; $('pillText').textContent = text; $('pill').title = l.full || '';
+  const b = $('banner');
+  if (l.state === 'mudo') { b.classList.add('on'); $('bannerText').innerHTML = '<b>El teclado está conectado pero no acepta órdenes.</b> Suele ser el puerto USB del PC: cambia el teclado (o su hub) a otro puerto y pulsa Reintentar.'; }
+  else if (l.state === 'sin') { b.classList.add('on'); $('bannerText').innerHTML = '<b>No encuentro el TK61.</b> Conéctalo por cable USB. La vista previa sigue funcionando.'; }
+  else b.classList.remove('on');
+}
+$('retry').onclick = async () => { showLink({ state: 'buscando' }); showLink(await api('retry')); };
+function report(r, okMsg) {
+  if (r && r.ok) { if (okMsg) toast(okMsg); return true; }
+  if (link.state === 'ok') toast('El teclado no recibió el cambio', true);
+  return false;
+}
+
+/* ---------- Aplicar ---------- */
+async function applyKind(kind, okMsg = 'Aplicado') {
+  cfg.last = kind; cfg.active = null; animating = kind === 'anim' ? cfg.anim.id : null;
+  renderProfiles();
+  report(await api('apply', kind, cfg[kind], null), okMsg);
+  if (kind === 'custom') setDirty(false);
+}
+const applyEffect = () => applyKind('effect');
+
+/* ---------- Vista previa ---------- */
+const kb = $('kb');
+ROWS.forEach(row => {
+  const div = document.createElement('div'); div.className = 'row';
+  row.forEach(([code, label, w]) => {
+    const el = document.createElement('div'); el.className = 'key'; el.dataset.code = code; el.textContent = label;
+    el.style.width = `calc(var(--u) * ${w} - 6px)`;
+    KEY[code].el = el; div.appendChild(el);
+  });
+  kb.appendChild(div);
+});
+const SNAKE = (() => { const o = {}; let n = 0; for (let r = 0; r < 5; r++) { const ks = KEYS.filter(k => k.row === r); (r % 2 ? ks.reverse() : ks).forEach(k => o[k.code] = n++); } return o; })();
+let presses = [], nextPress = 0;
+function simEffect(k, t) {
+  const e = cfg.effect, c1 = hexToRgb(e.c1), c2 = hexToRgb(e.c2), multi = e.multi;
+  const T = t * [.35, .6, 1, 1.5, 2.2][e.speed];
+  let c;
+  switch (e.id) {
+    case 0: c = c1; break;
+    case 1: { const cycle = T * .25, ph = (1 - Math.cos(cycle * 2 * Math.PI)) / 2; c = mix(c2, multi ? hsl(Math.floor(cycle) * 67) : c1, ph); break; }
+    case 2: {
+      const off = Math.abs(k.cx - .5) * 2;
+      const u = [k.cx - T * .35, k.cx + T * .35, k.cy * .5 + T * .35, k.cy * .5 - T * .35, off * .6 - T * .35, off * .6 + T * .35][e.dir] ?? k.cx;
+      c = multi ? hsl(u * 360) : mix(c2, c1, (1 + Math.sin(u * 2 * Math.PI)) / 2); break;
+    }
+    case 3: c = multi ? hsl(T * 45) : mix(c1, c2, (1 - Math.cos(T * .8)) / 2); break;
+    case 5: {
+      const head = (T * 14) % 61, i = SNAKE[k.code], d = e.dir === 7 ? (i - (61 - head) + 122) % 61 : (head - i + 61) % 61;
+      c = mix(multi ? hsl(i * 6) : c1, c2, Math.min(1, d / 9)); break;
+    }
+    default: {
+      let lit = 0, col = c1;
+      for (const p of presses) {
+        const age = T - p.t, dx = (k.cx - p.k.cx) * 15, dy = (k.cy - p.k.cy) * 5, dist = Math.hypot(dx, dy);
+        let a = 0;
+        if (e.id === 6) a = p.k === k ? 1 - age / 1.2 : 0;
+        else if (e.id === 7) a = dy === 0 ? Math.max(0, 1 - Math.abs(Math.abs(dx) - (e.dir === 5 ? 8 - age * 8 : age * 8)) / 1.5) * (1 - age / 1.4) : 0;
+        else a = Math.max(0, 1 - Math.abs(dist - age * 9) / 1.3) * (1 - age / 1.6);
+        if (a > lit) { lit = a; col = multi ? hsl(p.h) : c1; }
+      }
+      c = mix(c2, col, Math.max(0, lit));
+      if (T > nextPress) { presses = presses.filter(p => T - p.t < 2); presses.push({ t: T, k: KEYS[Math.floor(Math.random() * 61)], h: Math.random() * 360 }); nextPress = T + .45; }
+    }
+  }
+  return c.map(v => v * BR[e.bright]);
+}
+function paintKey(k, c) {
+  const hex = rgbToHex(c);
+  if (k.shown === hex) return;
+  k.shown = hex;
+  k.el.style.setProperty('--c', hex);
+  k.el.style.setProperty('--l', c[0] + c[1] + c[2] < 90 ? '#4b5160' : rgbToHex(mix(c, [255, 255, 255], .25)));
+}
+const ROW_COLORS = ['#ff0000', '#ffd000', '#00ff40', '#00d0ff', '#ff00d0'];
+let lastMs = 0, showRows = 0, visible = true, looping = false;
+// La vista previa se dibuja a ~30 cuadros/s y solo mientras la ventana se ve.
+function loop() { if (!looping && visible) { looping = true; requestAnimationFrame(frame); } }
+function frame(ms) {
+  looping = false;
+  if (!visible) return;
+  if (ms - lastMs < 30) return loop();
+  const t = ms / 1000, dt = Math.min(.1, (ms - lastMs) / 1000); lastMs = ms;
+  const view = calib ? 'calib' : showRows > ms ? 'rows' : kindOfTab();
+  let animColors = null;
+  if (view === 'anim') {
+    // Si el teclado esta animando esa misma animacion, se muestra exactamente lo que recibe; si no, una copia local.
+    if (animating === cfg.anim.id && mainFrame) animColors = mainFrame;
+    else {
+      if (!localAnim || localAnim.id !== cfg.anim.id) localAnim = { id: cfg.anim.id, step: ANIM.ANIMS[cfg.anim.id].create(cfg.anim.params, null) };
+      animColors = localAnim.step(dt);
+    }
+  }
+  for (const k of KEYS) {
+    if (view === 'effect') paintKey(k, simEffect(k, t));
+    else if (view === 'calib') paintKey(k, calib.map[k.code] != null ? [0, 70, 40] : [0, 0, 0]);
+    else if (view === 'rows') paintKey(k, hexToRgb(ROW_COLORS[k.row]));
+    else if (view === 'anim') paintKey(k, (animColors[k.code] || [0, 0, 0]).map(v => v * BR[cfg.anim.bright]));
+    else paintKey(k, hexToRgb(cfg.custom.colors[k.code] || '#000000').map(v => v * BR[cfg.custom.bright]));
+  }
+  loop();
+}
+window.tk61.on('visible', v => { visible = v; loop(); });
+
+/* ---------- Pestañas ---------- */
+function setTab(t) {
+  if (calib && t !== 'ajustes') return;
+  tab = t;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.dataset.panel === t));
+  kb.classList.toggle('paint', t === 'teclas');
+  $('hint').textContent = t === 'efectos' ? 'Vista aproximada: el efecto real lo genera el propio teclado.'
+    : t === 'teclas' ? 'Haz clic o arrastra sobre las teclas para pintarlas: se ve al instante en el teclado.'
+    : t === 'animaciones' ? (animating === cfg.anim.id ? 'En vivo: esto es lo que está recibiendo el teclado.' : 'Vista previa. Elige una animación para ponerla en el teclado.')
+    : 'Lo último que aplicaste.';
+}
+$('tabs').onclick = e => { if (e.target.dataset.tab) setTab(e.target.dataset.tab); };
+
+/* ---------- Perfiles ---------- */
+function sampleCss(p) {
+  if (p.kind === 'custom') { const row = KEYS.filter(k => k.row === 1).map(k => p.data.colors[k.code] || '#000'); return `linear-gradient(90deg, ${row.join(',')})`; }
+  if (p.kind === 'anim') { const q = p.data.params || {}; const cs = ['p1', 'ball', 'p2', 'c1', 'c2', 'c3'].map(i => q[i]).filter(Boolean); return cs.length > 1 ? `linear-gradient(90deg, ${cs.join(',')})` : q.multi ? 'linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f)' : cs[0] || '#333'; }
+  if (p.data.bright === 0) return '#000';
+  if (p.data.multi && p.data.id !== 0) return 'linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f)';
+  return p.data.id === 0 ? p.data.c1 : `linear-gradient(90deg, ${p.data.c1}, ${p.data.c2})`;
+}
+const kindName = p => p.kind === 'custom' ? 'Por tecla' : p.kind === 'anim' ? 'Animación · ' + ((ANIM.ANIMS[p.data.id] || {}).name || '') : 'Efecto · ' + ((EFFECTS.find(x => x.id === p.data.id) || {}).name || '');
+function renderProfiles() {
+  const box = $('plist'); box.innerHTML = '';
+  cfg.profiles.forEach((p, i) => {
+    const d = document.createElement('div'); d.className = 'pchip' + (cfg.active === p.id ? ' on' : editing === p.id ? ' mod' : ''); d.title = kindName(p) + (i < 9 ? ` · atajo ${i + 1}` : '');
+    const s = document.createElement('div'); s.className = 'sample'; s.style.background = sampleCss(p);
+    const n = document.createElement('div'); n.className = 'nm'; n.textContent = p.name;
+    const m = document.createElement('button'); m.className = 'more'; m.textContent = '⋯'; m.title = 'Opciones';
+    m.onclick = e => { e.stopPropagation(); profileMenu(p, i, m); };
+    d.onclick = () => useProfile(p);
+    d.ondblclick = () => renameProfile(p);
+    d.oncontextmenu = e => { e.preventDefault(); profileMenu(p, i, m); };
+    d.append(s, n, m); box.appendChild(d);
+  });
+  const ed = cfg.active == null && cfg.profiles.find(p => p.id === editing);
+  $('pUpd').hidden = !ed; if (ed) $('pUpd').textContent = `Guardar cambios en «${ed.name}»`;
+  if (!cfg.profiles.length) box.innerHTML = '<span style="color:var(--dim);padding:8px">Aún no hay perfiles: deja las luces a tu gusto y pulsa «Guardar como perfil».</span>';
+}
+async function useProfile(p) {
+  editing = p.id;
+  cfg[p.kind] = clone(p.data); cfg.last = p.kind; cfg.active = p.id; animating = p.kind === 'anim' ? p.data.id : null;
+  renderAll(); setTab(p.kind === 'effect' ? 'efectos' : p.kind === 'custom' ? 'teclas' : 'animaciones');
+  report(await api('apply', p.kind, p.data, p.id), p.name);
+  setDirty(false);
+}
+const saveProfiles = () => { save({ profiles: cfg.profiles, active: cfg.active }); renderProfiles(); };
+async function renameProfile(p) { const n = await ask('Nombre del perfil', p.name); if (n) { p.name = n; saveProfiles(); } }
+function profileMenu(p, i, anchor) {
+  const m = $('menu'); m.innerHTML = '';
+  const item = (label, fn, cls) => { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; b.onclick = () => { m.classList.remove('on'); fn(); }; m.appendChild(b); };
+  item('Usar', () => useProfile(p));
+  item('Cambiar nombre', () => renameProfile(p));
+  item('Guardar aquí lo que tengo ahora', () => { const k = kindOfTab(); p.kind = k; p.data = clone(cfg[k]); cfg.active = p.id; saveProfiles(); toast('Perfil actualizado'); });
+  item('Duplicar', () => { cfg.profiles.splice(i + 1, 0, { ...clone(p), id: Math.random().toString(36).slice(2, 10), name: p.name + ' (copia)' }); saveProfiles(); });
+  m.appendChild(document.createElement('hr'));
+  if (i > 0) item('Mover a la izquierda', () => { cfg.profiles.splice(i - 1, 0, cfg.profiles.splice(i, 1)[0]); saveProfiles(); });
+  if (i < cfg.profiles.length - 1) item('Mover a la derecha', () => { cfg.profiles.splice(i + 1, 0, cfg.profiles.splice(i, 1)[0]); saveProfiles(); });
+  item('Borrar', () => { cfg.profiles.splice(i, 1); if (cfg.active === p.id) cfg.active = null; saveProfiles(); }, 'danger');
+  const r = anchor.getBoundingClientRect();
+  m.classList.add('on');
+  m.style.left = Math.min(r.left, innerWidth - m.offsetWidth - 12) + 'px'; m.style.top = (r.bottom + 6) + 'px';
+}
+document.addEventListener('click', e => { if (!e.target.closest('#menu')) $('menu').classList.remove('on'); });
+$('pUpd').onclick = () => {
+  const p = cfg.profiles.find(x => x.id === editing); if (!p) return;
+  const k = kindOfTab(); p.kind = k; p.data = clone(cfg[k]); cfg.active = p.id; saveProfiles(); toast('Cambios guardados en «' + p.name + '»');
+};
+$('pAdd').onclick = async () => {
+  const k = kindOfTab();
+  const sug = k === 'anim' ? ANIM.ANIMS[cfg.anim.id].name : k === 'effect' ? (EFFECTS.find(x => x.id === cfg.effect.id) || {}).name : 'Mis colores';
+  const name = await ask('Nombre del perfil nuevo', sug); if (!name) return;
+  const p = { id: Math.random().toString(36).slice(2, 10), name, kind: k, data: clone(cfg[k]) };
+  cfg.profiles.unshift(p); cfg.active = p.id; editing = p.id; saveProfiles(); toast('Perfil guardado');
+};
+
+/* ---------- Efectos ---------- */
+function swatches() {
+  document.querySelectorAll('[data-sw]').forEach(box => {
+    PALETTE.forEach(c => { const b = document.createElement('button'); b.className = 'sw'; b.style.background = c; b.title = c; b.onclick = () => setColor(box.dataset.sw, c, true); box.appendChild(b); });
+  });
+}
+function setColor(which, c, commit) {
+  if (which === 'c1') cfg.effect.c1 = c; else if (which === 'c2') cfg.effect.c2 = c;
+  else if (which === 'brush') { brush = c; if (tool !== 'pintar') setTool('pintar'); } else if (which === 'brush2') brush2 = c;
+  $(which).value = c;
+  if (which === 'c1' || which === 'c2') { renderEffects(); if (commit) applyEffect(); }
+}
+function renderEffects() {
+  const e = cfg.effect, def = EFFECTS.find(x => x.id === e.id) || EFFECTS[0];
+  $('effects').innerHTML = '';
+  EFFECTS.forEach(x => {
+    const b = document.createElement('button'); b.className = 'chip' + (x.id === e.id ? ' on' : '');
+    b.innerHTML = `<b>${x.name}</b><small>${x.desc}</small>`;
+    b.onclick = () => { e.id = x.id; if (x.dirs && !x.dirs.some(d => d[0] === e.dir)) e.dir = x.dirs[0][0]; if (!x.dirs) e.dir = 0; renderEffects(); applyEffect(); };
+    $('effects').appendChild(b);
+  });
+  $('c1').value = e.c1; $('c2').value = e.c2; $('multi').checked = e.multi;
+  $('bright').value = e.bright; $('brightOut').textContent = brightText(e.bright);
+  $('speed').value = e.speed; $('speedOut').textContent = (e.speed + 1) + ' de 5';
+  const usesMulti = def.color === 2;
+  $('fC1').classList.toggle('off', usesMulti && e.multi);
+  $('fC2').classList.toggle('off', def.color !== 2);
+  $('fMulti').classList.toggle('off', !usesMulti);
+  $('fSpeed').classList.toggle('off', !def.speed);
+  $('fDir').classList.toggle('off', !def.dirs);
+  $('dir').innerHTML = '';
+  (def.dirs || []).forEach(([v, label]) => { const b = document.createElement('button'); b.textContent = label; b.className = v === e.dir ? 'on' : ''; b.onclick = () => { e.dir = v; renderEffects(); applyEffect(); }; $('dir').appendChild(b); });
+  const acc = hexToRgb(e.multi && usesMulti ? '#00d5ff' : e.c1);
+  document.documentElement.style.setProperty('--accent', acc[0] + acc[1] + acc[2] < 140 ? '#00d5ff' : rgbToHex(acc));
+}
+['c1', 'c2'].forEach(id => { $(id).oninput = () => { cfg.effect[id] = $(id).value; }; $(id).onchange = () => setColor(id, $(id).value, true); });
+$('multi').onchange = () => { cfg.effect.multi = $('multi').checked; renderEffects(); applyEffect(); };
+$('bright').oninput = () => { cfg.effect.bright = +$('bright').value; renderEffects(); };
+$('speed').oninput = () => { cfg.effect.speed = +$('speed').value; renderEffects(); };
+$('bright').onchange = $('speed').onchange = applyEffect;
+
+/* ---------- Por tecla (se ve en vivo; "Guardar" lo deja fijo en el teclado) ---------- */
+function setTool(t) { tool = t; document.querySelectorAll('#tool button').forEach(b => b.classList.toggle('on', b.dataset.tool === t)); }
+$('tool').onclick = e => { if (e.target.dataset.tool) setTool(e.target.dataset.tool); };
+$('brush').oninput = () => { brush = $('brush').value; if (tool !== 'pintar') setTool('pintar'); };
+$('brush2').oninput = () => { brush2 = $('brush2').value; };
+function setDirty(v) { dirty = v; $('dirty').hidden = !v; }
+let livePending = false;
+function pushLive() {              // como mucho un envio cada 40 ms
+  setDirty(true); animating = null;
+  if (cfg.active != null) { cfg.active = null; renderProfiles(); }
+  if (livePending) return;
+  livePending = true;
+  setTimeout(async () => { livePending = false; save({ custom: cfg.custom }); await api('live', cfg.custom.colors, cfg.custom.bright); }, 40);
+}
+function strokeKey(code) {
+  if (tool === 'gotero') { setColor('brush', cfg.custom.colors[code] || '#000000'); return; }
+  cfg.custom.colors[code] = tool === 'borrar' ? '#000000' : brush;
+  pushLive();
+}
+let painting = false;
+kb.addEventListener('pointerdown', e => {
+  const code = e.target.dataset.code; if (!code) return;
+  if (calib) { calibAssign(code); return; }
+  if (tab !== 'teclas') return;
+  painting = true; strokeKey(code); e.preventDefault();
+});
+kb.addEventListener('pointermove', e => {
+  if (!painting || tab !== 'teclas' || tool === 'gotero') return;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  if (el && el.dataset.code && cfg.custom.colors[el.dataset.code] !== (tool === 'borrar' ? '#000000' : brush)) strokeKey(el.dataset.code);
+});
+window.addEventListener('pointerup', () => { painting = false; });
+const FILLS = {
+  todo: () => brush,
+  gradH: k => lerpHex(brush, brush2, k.cx),
+  gradV: k => lerpHex(brush, brush2, k.row / 4),
+  gradD: k => lerpHex(brush, brush2, (k.cx + k.row / 4) / 2),
+  arcoH: k => rgbToHex(hsl(k.cx * 320)),
+  arcoD: k => rgbToHex(hsl((k.cx * .75 + k.row / 4 * .25) * 340)),
+  filas: k => rgbToHex(hsl(k.row * 68)),
+  letras: k => LETTERS.has(k.code) ? brush : brush2,
+  wasd: k => ['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(k.code) ? brush : brush2,
+  flechas: k => ['KeyI', 'KeyJ', 'KeyK', 'KeyL'].includes(k.code) ? brush : brush2,
+  azar: () => rgbToHex(hsl(Math.random() * 360)),
+  apagar: () => '#000000',
+};
+$('fills').onclick = e => { const f = FILLS[e.target.dataset.fill]; if (!f) return; KEYS.forEach(k => cfg.custom.colors[k.code] = f(k)); pushLive(); };
+$('cbright').oninput = () => { cfg.custom.bright = +$('cbright').value; $('cbrightOut').textContent = brightText(cfg.custom.bright); pushLive(); };
+$('applyCustom').onclick = () => applyKind('custom', 'Guardado en el teclado');
+
+/* ---------- Animaciones ---------- */
+let animSave;
+function animChanged(restart) {
+  clearTimeout(animSave); animSave = setTimeout(() => save({ anim: cfg.anim }), 300);
+  if (restart || animating !== cfg.anim.id) applyKind('anim', ANIM.ANIMS[cfg.anim.id].name);
+  else { cfg.active = null; renderProfiles(); api('anim-params', cfg.anim.params, cfg.anim.bright); }
+}
+function renderAnims() {
+  const a = cfg.anim, def = ANIM.ANIMS[a.id] || ANIM.ANIMS.pong; localAnim = null;
+  a.params = { ...ANIM.defaults(a.id), ...(a.params || {}) };
+  $('anims').innerHTML = '';
+  ANIM.ORDER.forEach(id => {
+    const x = ANIM.ANIMS[id], b = document.createElement('button'); b.className = 'chip' + (id === a.id ? ' on' : '');
+    b.innerHTML = `<b>${x.name}</b><small>${x.desc}</small>`;
+    b.onclick = () => { cfg.anim = { id, bright: a.bright, params: ANIM.defaults(id) }; localAnim = null; renderAnims(); animChanged(true); setTab('animaciones'); };
+    $('anims').appendChild(b);
+  });
+  $('abright').value = a.bright; $('abrightOut').textContent = brightText(a.bright);
+  const colors = $('animColors'), ranges = $('animRanges'); colors.innerHTML = ''; ranges.innerHTML = '';
+  def.params.forEach(q => {
+    const f = document.createElement('div'); f.className = 'field';
+    if (q.type === 'color') {
+      f.innerHTML = `<div class="lbl"><span>${q.label}</span></div><div class="colorrow"><input type="color"><span class="colorrow"></span></div>`;
+      const inp = f.querySelector('input'); inp.value = a.params[q.id];
+      const set = c => { a.params[q.id] = c; inp.value = c; animChanged(); };
+      inp.oninput = () => set(inp.value);
+      PALETTE.forEach(c => { const b = document.createElement('button'); b.className = 'sw'; b.style.background = c; b.onclick = () => set(c); f.querySelector('span.colorrow').appendChild(b); });
+      colors.appendChild(f);
+    } else if (q.type === 'toggle') {
+      f.innerHTML = `<label class="toggle"><input type="checkbox"> ${q.label}</label>`;
+      const inp = f.querySelector('input'); inp.checked = !!a.params[q.id];
+      inp.onchange = () => { a.params[q.id] = inp.checked; animChanged(); };
+      colors.appendChild(f);
+    } else {
+      f.innerHTML = `<label>${q.label} <output></output></label><input type="range" min="${q.min}" max="${q.max}" step="1">`;
+      const inp = f.querySelector('input'), out = f.querySelector('output'); inp.value = a.params[q.id]; out.textContent = (a.params[q.id] - q.min + 1) + ' de ' + (q.max - q.min + 1);
+      inp.oninput = () => { a.params[q.id] = +inp.value; out.textContent = (+inp.value - q.min + 1) + ' de ' + (q.max - q.min + 1); animChanged(); };
+      ranges.appendChild(f);
+    }
+  });
+}
+$('abright').oninput = () => { cfg.anim.bright = +$('abright').value; $('abrightOut').textContent = brightText(cfg.anim.bright); animChanged(); };
+
+/* ---------- Sonido del PC (solo mientras la animacion "Musica" esta puesta) ---------- */
+let audioStop = null;
+async function audioStart() {
+  if (audioStop) return;
+  let stream = null;
+  const tiny = { chromeMediaSource: 'desktop', maxWidth: 32, maxHeight: 32, maxFrameRate: 1 };
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { mandatory: { chromeMediaSource: 'desktop' } }, video: { mandatory: tiny } }); }
+  catch (e1) { console.log('audio: getUserMedia fallo: ' + e1); try { stream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true }); } catch (e2) { console.log('audio: getDisplayMedia fallo: ' + e2); stream = null; } }
+  console.log('audio: pistas ' + (stream ? stream.getAudioTracks().length + ' de audio, ' + stream.getVideoTracks().length + ' de video' : 'sin stream'));
+  if (!stream || !stream.getAudioTracks().length) { if (stream) stream.getTracks().forEach(t => t.stop()); toast('No pude captar el sonido del PC', true); return; }
+  stream.getVideoTracks().forEach(t => t.stop());           // la imagen no se usa: solo el audio
+  const ctx = new AudioContext(); await ctx.resume();
+  const an = ctx.createAnalyser(); an.fftSize = 2048; an.smoothingTimeConstant = .5;
+  ctx.createMediaStreamSource(stream).connect(an);
+  const data = new Uint8Array(an.frequencyBinCount), hz = ctx.sampleRate / an.fftSize;
+  const edges = Array.from({ length: 16 }, (_, i) => 45 * Math.pow(13000 / 45, i / 15));   // 15 bandas de 45 Hz a 13 kHz
+  const timer = setInterval(() => {
+    an.getByteFrequencyData(data);
+    const bands = [];
+    for (let i = 0; i < 15; i++) {
+      const lo = Math.max(1, Math.floor(edges[i] / hz)), hi = Math.max(lo + 1, Math.ceil(edges[i + 1] / hz));
+      let m = 0; for (let b = lo; b < hi && b < data.length; b++) m = Math.max(m, data[b]);
+      bands.push(Math.pow(m / 255, 1.8));
+    }
+    window.tk61.audio({ bands, bass: Math.max(bands[0], bands[1], bands[2]) });
+  }, 40);
+  audioStop = () => { clearInterval(timer); stream.getTracks().forEach(t => t.stop()); ctx.close(); audioStop = null; };
+}
+window.tk61.on('audio', on => { if (on) audioStart(); else if (audioStop) audioStop(); });
+
+/* ---------- Ajustes ---------- */
+function renderSettings() {
+  const s = cfg.settings;
+document.querySelectorAll('#sFps button').forEach(b => b.classList.toggle('on', +b.dataset.fps === (s.fps || 20)));
+  $('sAuto').checked = s.autoStart; $('sTray').checked = s.keepInTray; $('sRestore').checked = s.restore; $('sKeys').checked = s.hotkeys;
+}
+[['sAuto', 'autoStart'], ['sTray', 'keepInTray'], ['sRestore', 'restore'], ['sKeys', 'hotkeys']].forEach(([id, key]) => {
+  $(id).onchange = () => { cfg.settings[key] = $(id).checked; save({ settings: { [key]: $(id).checked } }); };
+});
+$('sFps').onclick = e => { const f = +e.target.dataset.fps; if (!f) return; cfg.settings.fps = f; save({ settings: { fps: f } }); renderSettings(); };
+$('exp').onclick = async () => { const r = await api('export'); if (r.ok) toast('Exportado'); };
+$('imp').onclick = async () => { const r = await api('import'); if (r.ok) { cfg = r.cfg; renderAll(); toast('Importado'); } else if (r.detail) toast(r.detail, true); };
+function showUpd(u) { $('updText').textContent = u.text || ''; $('updInstall').hidden = u.state !== 'lista'; $('updCheck').disabled = u.state === 'dev' || u.state === 'buscando' || u.state === 'bajando'; }
+$('updCheck').onclick = async () => showUpd(await api('update-check'));
+$('updInstall').onclick = () => api('update-install');
+
+/* ---------- Calibración (todo en vivo, sin gastar la memoria del teclado) ---------- */
+const restoreLights = () => api('apply', cfg.last, cfg[cfg.last], cfg.active);
+$('calTest').onclick = async () => {
+  showRows = performance.now() + 8000;
+  const r = await api('live', Object.fromEntries(KEYS.map(k => [k.code, ROW_COLORS[k.row]])), 4);
+  if (report(r)) { toast('Durante 8 s: si el teclado se ve igual que el dibujo, el mapa está bien'); setTimeout(() => { if (!calib) restoreLights(); }, 8000); }
+};
+$('calReset').onclick = () => { cfg.map = { ...DEFAULT_MAP }; save({ map: cfg.map }); toast('Mapa estimado restaurado'); };
+function calibOrder() {
+  const first = [], rest = [];
+  for (let s = 0; s < SLOTS - 6; s++) { const r = Math.floor(s / GRID_COLS), c = s % GRID_COLS; (r >= 1 && c <= 14 ? first : rest).push(s); }
+  return [...first, ...rest];
+}
+async function calibShow() {
+  const c = calib, total = c.order.length;
+  const missing = KEYS.filter(k => c.map[k.code] == null);
+  if (c.i >= total || !missing.length) { calibFinish(); return; }
+  $('calBig').textContent = 'Pulsa en el teclado la tecla que está encendida en blanco';
+  $('calSub').textContent = `Posición ${c.i + 1} de ${total} · ${61 - missing.length} de 61 teclas ubicadas. Para Win y Fn haz clic en el dibujo.`;
+  $('calBar').style.width = ((61 - missing.length) / 61 * 100) + '%';
+  KEYS.forEach(k => k.el.classList.toggle('done', c.map[k.code] != null));
+  c.ready = false;
+  const r = await api('live-slots', [[c.order[c.i], [255, 255, 255]]]);
+  if (!r.ok) { toast('El teclado no respondió; calibración cancelada', true); calibEnd(); return; }
+  if (calib === c) c.ready = true;
+}
+function calibAssign(code) {
+  const c = calib; if (!c || !c.ready || !KEY[code]) return;
+  const slot = c.order[c.i];
+  for (const k in c.map) if (c.map[k] === slot) delete c.map[k];
+  c.map[code] = slot; c.hist.push(c.i); c.i++; calibShow();
+}
+function calibEnd() {
+  calib = null; $('cal').classList.remove('on'); kb.classList.remove('pickable');
+  KEYS.forEach(k => { k.el.classList.remove('done'); k.shown = null; });
+  restoreLights();
+}
+function calibFinish() {
+  const c = calib, missing = KEYS.filter(k => c.map[k.code] == null);
+  cfg.map = { ...c.map }; save({ map: cfg.map }); calibEnd();
+  toast(missing.length ? `Mapa guardado; quedaron ${missing.length} teclas sin ubicar` : 'Mapa guardado: las 61 teclas ubicadas');
+}
+$('calStart').onclick = () => {
+  if (link.state !== 'ok') { toast('Primero el teclado tiene que estar conectado y respondiendo', true); return; }
+  if (document.activeElement) document.activeElement.blur();
+  calib = { order: calibOrder(), i: 0, map: {}, hist: [], ready: false };
+  $('cal').classList.add('on'); kb.classList.add('pickable'); $('cal').scrollIntoView({ block: 'nearest' });
+  calibShow();
+};
+$('calNone').onclick = () => { if (calib && calib.ready) { calib.hist.push(calib.i); calib.i++; calibShow(); } };
+$('calBack').onclick = () => {
+  if (!calib || !calib.ready || !calib.hist.length) return;
+  calib.i = calib.hist.pop(); const slot = calib.order[calib.i];
+  for (const k in calib.map) if (calib.map[k] === slot) delete calib.map[k];
+  calibShow();
+};
+$('calDone').onclick = () => { if (calib) calibFinish(); };
+$('calCancel').onclick = () => { if (calib) { calibEnd(); toast('Calibración cancelada; el mapa no cambió'); } };
+const calibKey = e => {
+  if (!calib) return;
+  e.preventDefault(); e.stopPropagation();
+  if (e.type === 'keydown' && !e.repeat) { if (KEY[e.code]) calibAssign(e.code); else toast('No reconozco esa tecla: haz clic sobre ella en el dibujo'); }
+};
+window.addEventListener('keydown', calibKey, true);
+window.addEventListener('keyup', calibKey, true);
+
+/* ---------- Arranque ---------- */
+function renderAll() {
+  renderProfiles(); renderEffects(); renderAnims(); renderSettings();
+  $('cbright').value = cfg.custom.bright; $('cbrightOut').textContent = brightText(cfg.custom.bright);
+}
+window.tk61.on('link', showLink);
+window.tk61.on('frame', f => { mainFrame = f; });
+window.tk61.on('update', showUpd);
+window.tk61.on('applied', d => {        // perfil puesto desde la bandeja o un atajo
+  cfg = d.cfg; editing = cfg.active; animating = cfg.last === 'anim' ? cfg.anim.id : null; localAnim = null; setDirty(false);
+  renderAll(); setTab(cfg.last === 'effect' ? 'efectos' : cfg.last === 'custom' ? 'teclas' : 'animaciones');
+});
+(async () => {
+  const init = await api('init');
+  cfg = init.cfg; animating = init.animating; editing = cfg.active;
+  visible = init.visible !== false;
+  if (animating === 'musica') audioStart();
+  swatches(); renderAll(); showLink(init.link); showUpd(init.upd);
+  $('ver').textContent = 'Versión ' + init.version;
+  $('brush').value = brush; $('brush2').value = brush2;
+  const want = location.hash.slice(1);
+  setTab(['efectos', 'teclas', 'animaciones', 'ajustes'].includes(want) ? want : cfg.last === 'custom' ? 'teclas' : cfg.last === 'anim' ? 'animaciones' : 'efectos');
+  loop();
+})();
+</script>
+</body>
+</html>
