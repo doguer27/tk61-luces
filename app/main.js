@@ -51,7 +51,7 @@ function defaults() {
     active: null,                    // id del perfil en uso (null = ajuste suelto)
     last: 'effect',                  // 'effect' | 'custom' | 'anim'
     seed: SEED,
-    settings: { autoStart: false, keepInTray: true, restore: true, hotkeys: false, fps: 20 },
+    settings: { autoStart: false, keepInTray: true, restore: true, hotkeys: false, fps: 20, preview: true, restoreOnExit: true },
   };
 }
 let cfg = defaults();
@@ -83,6 +83,7 @@ function saveCfg() {
 let dev = null, link = { state: 'buscando', version: '', detail: '' }, lastFail = 0;
 let inCustom = null;                 // brillo del modo "por tecla" que NOSOTROS dejamos puesto (null = no sabemos)
 let sent = [];                       // ultimo paquete enviado por indice, para mandar solo lo que cambia
+let ramDirty = false;                // true = lo que muestra el teclado es temporal (animacion o pintura sin guardar)
 
 // Siempre filtrado por VID/PID: enumerar todos los HID le pide descriptores a cada dispositivo (raton incluido).
 const findInfo = () => { try { return HID.devices(VID, PID).find(d => d.usagePage === USAGE_PAGE && d.usage === USAGE); } catch { return null; } };
@@ -146,7 +147,7 @@ function ensureCustom(bright) {
 }
 // Colores en vivo: solo paquetes 0..6 (no graban en la flash) y solo los que cambian.
 function liveSlots(slots, bright) {
-  ensureCustom(bright);
+  ensureCustom(bright); ramDirty = true;
   TK.keyPackets(slots).slice(0, TK.LIVE_PACKETS).forEach((h, i) => { if (h !== sent[i]) { write(h); sent[i] = h; } });
 }
 const liveKeys = (colors, bright) => liveSlots(TK.frameSlots(cfg.map, c => colors[c]), bright);
@@ -155,12 +156,24 @@ const hexColors = colors => c => (colors[c] ? TK.hexToRgb(colors[c]) : null);
 function applyEffect(e) {
   stopAnim();
   write(TK.modePacket(e.id, e.bright, e.speed, e.c1, e.c2, e.dir, e.multi && e.id !== 0));
-  inCustom = null; sent = [];
+  inCustom = null; sent = []; ramDirty = false;
+  cfg.saved = { kind: 'effect', data: JSON.parse(JSON.stringify(e)) };
 }
 function applyCustom(c) {              // fijo y guardado en el teclado (paquete 7 incluido)
   stopAnim();
   ensureCustom(c.bright);
   TK.keyPackets(TK.frameSlots(cfg.map, hexColors(c.colors))).forEach((h, i) => { write(h); sent[i] = h; });
+  ramDirty = false;
+  cfg.saved = { kind: 'custom', data: JSON.parse(JSON.stringify(c)) };
+}
+// Al salir: el teclado vuelve a lo ultimo fijo que se le guardo (sin escribir en su flash).
+function restoreSaved() {
+  if (!ramDirty || !cfg.settings.restoreOnExit || link.state !== 'ok') return;
+  try {
+    const sv = cfg.saved;
+    if (sv && sv.kind === 'custom') { inCustom = null; liveSlots(TK.frameSlots(cfg.map, hexColors(sv.data.colors)), sv.data.bright); }
+    else { const e = (sv && sv.data) || cfg.effect; write(TK.modePacket(e.id, e.bright, e.speed, e.c1, e.c2, e.dir, e.multi && e.id !== 0)); }
+  } catch { /* si el teclado no esta, no hay nada que devolver */ }
 }
 
 /* ------------------------------------------------ Animaciones ------------------------------------------------ */
@@ -196,7 +209,7 @@ function tick() {
   anim.last = now;
   const colors = anim.step(dt);
   if (link.state === 'ok') { try { liveKeys(colors, anim.bright); } catch (e) { fail(e); } }
-  if (win && win.isVisible() && !win.isMinimized()) win.webContents.send('frame', colors);
+  if (win && cfg.settings.preview !== false && win.isVisible() && !win.isMinimized()) win.webContents.send('frame', colors);
 }
 // Tras reconectar (o al arrancar): las animaciones viven en el PC, hay que volver a lanzarlas.
 function resumeLive() { if (anim) { inCustom = null; sent = []; } else if (cfg.last === 'anim' && cfg.settings.restore) startAnim(cfg.anim); }
@@ -343,9 +356,9 @@ ipcMain.handle('import', async () => {
 });
 
 /* ------------------------------------------------ Arranque ------------------------------------------------ */
-app.on('second-instance', showWindow);
+app.on('second-instance', (_e, argv) => { if (argv.includes('--salir')) { quitting = true; app.quit(); } else showWindow(); });
 app.on('window-all-closed', () => { /* seguimos en la bandeja */ });
-app.on('before-quit', () => { quitting = true; stopAnim(); closeDev(); if (SHOT || DEVANIM) return; try { fs.writeFileSync(CFG_PATH, JSON.stringify(cfg, null, 1)); } catch { /* nada */ } });
+app.on('before-quit', () => { quitting = true; stopAnim(); restoreSaved(); closeDev(); if (SHOT || DEVANIM) return; try { fs.writeFileSync(CFG_PATH, JSON.stringify(cfg, null, 1)); } catch { /* nada */ } });
 app.whenReady().then(() => {
   loadCfg();
   const img = nativeImage.createFromPath(ICON);

@@ -59,6 +59,8 @@
   .kb.paint .key { cursor: crosshair; }
   .kb.pickable .key { cursor: pointer; }
   .key.done { outline: 2px solid #35e08a; outline-offset: -2px; }
+  .link { border: 0; background: none; color: var(--accent); cursor: pointer; font-size: 12.5px; padding: 0 4px; text-decoration: underline; text-underline-offset: 3px; }
+  .kb.paused { opacity: .35; filter: saturate(.4); }
   .hint { text-align: center; color: var(--dim); font-size: 12.5px; margin: 12px 0 0; min-height: 18px; }
 
   .tabs { display: flex; gap: 6px; margin: 18px 0 12px; padding: 5px; background: var(--panel); border: 1px solid var(--line); border-radius: 13px; width: max-content; }
@@ -146,7 +148,7 @@
 
   <section class="stage">
     <div class="kb" id="kb"></div>
-    <p class="hint" id="hint"></p>
+    <p class="hint"><span id="hint"></span> <button class="link" id="pvToggle"></button></p>
   </section>
 
   <nav class="tabs" id="tabs">
@@ -239,7 +241,9 @@
   <section class="panel" data-panel="ajustes">
     <h2>Arranque</h2>
     <div class="setrow"><label class="toggle"><input type="checkbox" id="sAuto"><span>Abrir al iniciar Windows<small>Arranca escondida en la bandeja.</small></span></label></div>
-    <div class="setrow"><label class="toggle"><input type="checkbox" id="sTray"><span>Seguir en la bandeja al cerrar la ventana<small>Hace falta para que las animaciones sigan corriendo.</small></span></label></div>
+    <div class="setrow"><label class="toggle"><input type="checkbox" id="sTray"><span>Al cerrar la ventana, seguir en la bandeja<small>La X no apaga la app: queda junto al reloj y las animaciones siguen. Para salir del todo: clic derecho en el icono → Salir.</small></span></label></div>
+    <div class="setrow"><label class="toggle"><input type="checkbox" id="sExit"><span>Al salir de la app, devolver el teclado a lo último guardado<small>Si no, se queda congelado en el último cuadro de la animación hasta que lo desenchufes.</small></span></label></div>
+    <div class="setrow"><label class="toggle"><input type="checkbox" id="sPrev"><span>Vista previa animada en la ventana<small>Apágala si quieres que la app gaste lo mínimo mientras está abierta; el teclado sigue igual.</small></span></label></div>
     <div class="setrow"><label class="toggle"><input type="checkbox" id="sRestore"><span>Retomar la animación al abrir o al reconectar el teclado</span></label></div>
     <div class="setrow"><label class="toggle"><input type="checkbox" id="sKeys"><span>Atajos de teclado para los perfiles<small>Ctrl + Alt + Shift + 1…9 pone el perfil de esa posición; con 0 apaga las luces. Funcionan desde cualquier programa.</small></span></label></div>
 
@@ -408,10 +412,18 @@ function paintKey(k, c) {
 const ROW_COLORS = ['#ff0000', '#ffd000', '#00ff40', '#00d0ff', '#ff00d0'];
 let lastMs = 0, showRows = 0, visible = true, looping = false;
 // La vista previa se dibuja a ~30 cuadros/s y solo mientras la ventana se ve.
-function loop() { if (!looping && visible) { looping = true; requestAnimationFrame(frame); } }
+const previewOn = () => cfg.settings.preview !== false || !!calib || tab === 'teclas';     // pintar y calibrar siempre se ven
+function loop() { if (!looping && visible && previewOn()) { looping = true; requestAnimationFrame(frame); } }
+function renderPreviewToggle() {
+  const on = cfg.settings.preview !== false;
+  $('pvToggle').textContent = on ? 'Pausar vista previa' : 'Reanudar vista previa';
+  kb.classList.toggle('paused', !previewOn());
+  loop();
+}
+$('pvToggle').onclick = () => { cfg.settings.preview = cfg.settings.preview === false; save({ settings: { preview: cfg.settings.preview } }); renderPreviewToggle(); renderSettings(); };
 function frame(ms) {
   looping = false;
-  if (!visible) return;
+  if (!visible || !previewOn()) return;
   if (ms - lastMs < 30) return loop();
   const t = ms / 1000, dt = Math.min(.1, (ms - lastMs) / 1000); lastMs = ms;
   const view = calib ? 'calib' : showRows > ms ? 'rows' : kindOfTab();
@@ -442,6 +454,7 @@ function setTab(t) {
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.dataset.panel === t));
   kb.classList.toggle('paint', t === 'teclas');
+  renderPreviewToggle();
   $('hint').textContent = t === 'efectos' ? 'Vista aproximada: el efecto real lo genera el propio teclado.'
     : t === 'teclas' ? 'Haz clic o arrastra sobre las teclas para pintarlas: se ve al instante en el teclado.'
     : t === 'animaciones' ? (animating === cfg.anim.id ? 'En vivo: esto es lo que está recibiendo el teclado.' : 'Vista previa. Elige una animación para ponerla en el teclado.')
@@ -680,10 +693,11 @@ window.tk61.on('audio', on => { if (on) audioStart(); else if (audioStop) audioS
 function renderSettings() {
   const s = cfg.settings;
 document.querySelectorAll('#sFps button').forEach(b => b.classList.toggle('on', +b.dataset.fps === (s.fps || 20)));
+  $('sExit').checked = s.restoreOnExit !== false; $('sPrev').checked = s.preview !== false;
   $('sAuto').checked = s.autoStart; $('sTray').checked = s.keepInTray; $('sRestore').checked = s.restore; $('sKeys').checked = s.hotkeys;
 }
-[['sAuto', 'autoStart'], ['sTray', 'keepInTray'], ['sRestore', 'restore'], ['sKeys', 'hotkeys']].forEach(([id, key]) => {
-  $(id).onchange = () => { cfg.settings[key] = $(id).checked; save({ settings: { [key]: $(id).checked } }); };
+[['sAuto', 'autoStart'], ['sTray', 'keepInTray'], ['sRestore', 'restore'], ['sKeys', 'hotkeys'], ['sExit', 'restoreOnExit'], ['sPrev', 'preview']].forEach(([id, key]) => {
+  $(id).onchange = () => { cfg.settings[key] = $(id).checked; save({ settings: { [key]: $(id).checked } }); if (key === 'preview') renderPreviewToggle(); };
 });
 $('sFps').onclick = e => { const f = +e.target.dataset.fps; if (!f) return; cfg.settings.fps = f; save({ settings: { fps: f } }); renderSettings(); };
 $('exp').onclick = async () => { const r = await api('export'); if (r.ok) toast('Exportado'); };
