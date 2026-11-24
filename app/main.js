@@ -393,6 +393,7 @@ app.whenReady().then(() => {
   ses.setDisplayMediaRequestHandler((_req, cb) => {
     desktopCapturer.getSources({ types: ['screen'] }).then(src => cb({ video: src[0], audio: 'loopback' })).catch(() => cb({}));
   });
+  if (DEV && process.argv.includes('--sinprevia')) cfg.settings.preview = false;
   if (DEVANIM) { cfg.last = 'anim'; cfg.anim = { id: DEVANIM, bright: 4, params: A.defaults(DEVANIM) }; startAnim(cfg.anim); }
   if (!HIDDEN) createWindow(true);
   if (findInfo()) { if (handshake()) resumeLive(); } else setLink('sin');

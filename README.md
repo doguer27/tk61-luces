@@ -28,9 +28,14 @@ repositorio y el instalador se genera a partir de él.
 ## Compatibilidad
 
 Probado con un Tezarre TK61 que se identifica por USB como `0416:B23C`, firmware `TK61BIRRGB V1.04.00`.
-Otros teclados con el mismo chip (Winbond/Nuvoton «Gaming Keyboard» con firmware Witmod) usan el mismo protocolo y
-probablemente funcionen, pero la posición de cada tecla puede ser distinta: en **Ajustes → Mapa de teclas** hay una
-calibración guiada.
+No sirve para «cualquier teclado RGB»: cada fabricante de chips habla su propio idioma. La app solo reconoce teclados
+que se identifican como `0416:B23C` (chip Winbond/Nuvoton con firmware Witmod). Con ese mismo identificador se han
+visto, además del TK61, el Pulsar PCMK, los KT108/KT87 y los Hator Rockfall/Skyfall; deberían aceptar los efectos,
+pero no están probados aquí. El dibujo y las animaciones están pensados para 61 teclas: en un teclado más grande las
+teclas extra se quedan apagadas.
+
+La primera vez que abres la app te pide comprobar que cada tecla se enciende donde debe y, si no coincide, te guía
+para calibrarla (también en **Ajustes → Teclado**).
 
 Si la app dice «No responde»: cambia el teclado (o su hub) a otro puerto USB del PC. En algunos controladores USB
 el teclado se puede usar para escribir pero no recibe órdenes.

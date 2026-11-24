@@ -50,7 +50,9 @@
   .kb.pickable .key { cursor: pointer; }
   .key.done { outline: 2px solid #35e08a; outline-offset: -2px; }
   .link { border: 0; background: none; color: var(--accent); cursor: pointer; font-size: 12.5px; padding: 0 4px; text-decoration: underline; text-underline-offset: 3px; }
-  .kb.paused { opacity: .35; filter: saturate(.4); }
+  .stage.collapsed { padding: 9px 0; border-radius: 13px; box-shadow: none; }
+  .stage.collapsed .kb { display: none; }
+  .stage.collapsed .hint { margin: 0; }
   .hint { text-align: center; color: var(--dim); font-size: 12.5px; margin: 12px 0 0; min-height: 18px; }
 
   .tabrow { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; flex-wrap: wrap; }
@@ -303,7 +305,7 @@
           <small class="note">Cada cuadro viaja por USB. Si otro aparato del mismo hub da tirones, baja esto.</small>
         </div>
       <label class="sw-row"><span>Retomar la animación al abrir<small>También al volver a enchufar el teclado.</small></span><input type="checkbox" class="switch" id="sRestore"></label>
-      <label class="sw-row"><span>Vista previa animada en la ventana<small>Apágala para gastar lo mínimo mientras la ventana está abierta; el teclado sigue igual.</small></span><input type="checkbox" class="switch" id="sPrev"></label>
+      <label class="sw-row"><span>Vista previa animada en la ventana<small>Apagada, el dibujo del teclado se oculta (menos en «Por tecla») y la ventana gasta lo mínimo; el teclado sigue igual.</small></span><input type="checkbox" class="switch" id="sPrev"></label>
       </article>
 
       <article class="card">
@@ -492,12 +494,13 @@ let setupOn = false;
 const previewOn = () => !!cfg && (cfg.settings.preview !== false || !!calib || setupOn || tab === 'teclas');     // pintar y calibrar siempre se ven
 function loop() { if (!looping && visible && previewOn()) { looping = true; requestAnimationFrame(frame); } }
 function renderPreviewToggle() {
-  const on = cfg.settings.preview !== false;
-  $('pvToggle').textContent = on ? 'Pausar vista previa' : 'Reanudar vista previa';
-  kb.classList.toggle('paused', !previewOn());
+  const on = cfg.settings.preview !== false, shown = previewOn();
+  $('pvToggle').textContent = on ? 'Ocultar vista previa' : 'Mostrar vista previa';
+  document.querySelector('.stage').classList.toggle('collapsed', !shown);
+  if (!shown) $('hint').textContent = 'Vista previa apagada.';
   loop();
 }
-$('pvToggle').onclick = () => { cfg.settings.preview = cfg.settings.preview === false; save({ settings: { preview: cfg.settings.preview } }); renderPreviewToggle(); renderSettings(); };
+$('pvToggle').onclick = () => { cfg.settings.preview = cfg.settings.preview === false; save({ settings: { preview: cfg.settings.preview } }); setTab(tab); renderSettings(); };
 function frame(ms) {
   looping = false;
   if (!visible || !previewOn()) return;
@@ -531,11 +534,11 @@ function setTab(t) {
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.dataset.panel === t));
   kb.classList.toggle('paint', t === 'teclas');
-  renderPreviewToggle();
   $('hint').textContent = t === 'efectos' ? 'Vista aproximada: el efecto real lo genera el propio teclado.'
     : t === 'teclas' ? 'Haz clic o arrastra sobre las teclas para pintarlas: se ve al instante en el teclado.'
     : t === 'animaciones' ? (animating === cfg.anim.id ? 'En vivo: esto es lo que está recibiendo el teclado.' : 'Vista previa. Elige una animación para ponerla en el teclado.')
     : setupOn ? 'Así debe verse tu teclado ahora.' : 'Lo último que aplicaste.';
+  renderPreviewToggle();
 }
 $('tabs').onclick = e => { if (e.target.dataset.tab) setTab(e.target.dataset.tab); };
 
@@ -793,7 +796,7 @@ document.querySelectorAll('#sFps button').forEach(b => b.classList.toggle('on', 
   $('sAuto').checked = s.autoStart; $('sTray').checked = s.keepInTray; $('sRestore').checked = s.restore; $('sKeys').checked = s.hotkeys;
 }
 [['sAuto', 'autoStart'], ['sTray', 'keepInTray'], ['sRestore', 'restore'], ['sKeys', 'hotkeys'], ['sExit', 'restoreOnExit'], ['sPrev', 'preview']].forEach(([id, key]) => {
-  $(id).onchange = () => { cfg.settings[key] = $(id).checked; save({ settings: { [key]: $(id).checked } }); if (key === 'preview') renderPreviewToggle(); };
+  $(id).onchange = () => { cfg.settings[key] = $(id).checked; save({ settings: { [key]: $(id).checked } }); if (key === 'preview') setTab(tab); };
 });
 $('sFps').onclick = e => { const f = +e.target.dataset.fps; if (!f) return; cfg.settings.fps = f; save({ settings: { fps: f } }); renderSettings(); };
 $('repo').onclick = () => api('open-repo');
