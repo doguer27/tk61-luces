@@ -1,5 +1,5 @@
 // TK61 Luces - proceso principal: habla con el teclado, corre las animaciones y vive en la bandeja.
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, globalShortcut, dialog, session, desktopCapturer, shell } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, globalShortcut, dialog, session, desktopCapturer, shell, screen } = require('electron');
 const path = require('path'), fs = require('fs'), os = require('os');
 const HID = require('node-hid');
 const TK = require('./protocolo'), A = require('./animaciones');
@@ -12,6 +12,7 @@ const ICON = path.join(__dirname, 'icono.png');
 const DEV = !app.isPackaged;
 const SHOT = DEV ? (process.argv.find(a => a.startsWith('--shot=')) || '').slice(7) : '';
 const TAB = DEV ? (process.argv.find(a => a.startsWith('--tab=')) || '').slice(6) : '';
+const AVISO_SHOT = DEV ? (process.argv.find(a => a.startsWith('--shot-aviso=')) || '').slice(13) : '';
 const DEVANIM = DEV ? (process.argv.find(a => a.startsWith('--anim=')) || '').slice(7) : '';   // arranca con esa animacion, sin guardarla
 // El ecualizador analiza el sonido sin que nadie haya hecho clic en la ventana.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -299,15 +300,33 @@ function applySettings() {
 /* ------------------------------------------------ Actualizaciones ------------------------------------------------ */
 let upd = { state: 'inactivo', text: '' }, updater = null;
 function setUpd(state, text) { upd = { state, text }; if (win) win.webContents.send('update', upd); }
-let prompted = '';
-const installUpdate = () => { if (updater && upd.state === 'lista') { quitting = true; updater.quitAndInstall(true, true); } };   // instala en silencio y reabre
-async function promptUpdate(version) {
-  if (prompted === version) return;
-  prompted = version;
-  const opts = { type: 'info', title: 'TK61 Luces', message: `Hay una versión nueva de TK61 Luces (${version})`,
-    detail: 'Ya está descargada. Instalarla tarda unos segundos y la app se vuelve a abrir sola.', buttons: ['Instalar ahora', 'Más tarde'], defaultId: 0, cancelId: 1, noLink: true };
-  const r = await (win && win.isVisible() ? dialog.showMessageBox(win, opts) : dialog.showMessageBox(opts));
-  if (r.response === 0) installUpdate();
+let prompted = '', updWin = null;
+const installUpdate = () => {
+  if (updater && upd.state === 'lista') { quitting = true; updater.quitAndInstall(true, true); }      // instala en silencio y reabre
+  else if (updWin) updWin.close();
+};
+// Ventanita propia de la app: centrada sobre la ventana si esta abierta; si no, en la esquina junto al reloj.
+function promptUpdate(version, demo) {
+  if (updWin || (!demo && prompted === version)) return;
+  if (!demo) prompted = version;
+  const W = 440, H = 200;
+  let x, y;
+  if (win && win.isVisible() && !win.isMinimized()) { const b = win.getBounds(); x = Math.round(b.x + (b.width - W) / 2); y = Math.round(b.y + (b.height - H) / 2); }
+  else { const a = screen.getPrimaryDisplay().workArea; x = a.x + a.width - W - 18; y = a.y + a.height - H - 18; }
+  updWin = new BrowserWindow({
+    width: W, height: H, x, y, frame: false, resizable: false, minimizable: false, maximizable: false, fullscreenable: false,
+    skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: '#13151b', title: 'TK61 Luces', icon: ICON,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false, devTools: DEV },
+  });
+  updWin.setMenu(null);
+  updWin.loadFile(path.join(__dirname, 'aviso.html'), { query: { v: version } });
+  updWin.once('ready-to-show', () => { if (updWin) updWin.show(); });
+  updWin.webContents.on('will-navigate', e => e.preventDefault());
+  updWin.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  updWin.on('closed', () => { updWin = null; });
+  if (AVISO_SHOT) updWin.webContents.once('did-finish-load', () => setTimeout(async () => {
+    fs.writeFileSync(AVISO_SHOT, (await updWin.webContents.capturePage()).toPNG()); quitting = true; app.quit();
+  }, 1200));
 }
 function setupUpdater() {
   if (DEV) return setUpd('dev', 'Versión de desarrollo: no se actualiza sola.');
@@ -354,6 +373,7 @@ ipcMain.on('audio', (_e, a) => { audio = a && Array.isArray(a.bands) && a.bands.
 ipcMain.handle('retry', () => { lastFail = 0; closeDev(); const ok = findInfo() ? handshake() : (setLink('sin'), false); if (ok) resumeLive(); return link; });
 ipcMain.handle('update-check', () => { if (updater) updater.checkForUpdates().catch(() => {}); else setupUpdater(); return upd; });
 ipcMain.handle('update-install', installUpdate);
+ipcMain.handle('update-later', () => { if (updWin) updWin.close(); });
 ipcMain.handle('open-repo', () => shell.openExternal('https://github.com/doguer27/tk61-luces'));
 ipcMain.handle('export', async () => {
   const r = await dialog.showSaveDialog(win, { title: 'Exportar perfiles y ajustes', defaultPath: 'tk61-luces.json', filters: [{ name: 'JSON', extensions: ['json'] }] });
@@ -376,7 +396,11 @@ ipcMain.handle('import', async () => {
 });
 
 /* ------------------------------------------------ Arranque ------------------------------------------------ */
-app.on('second-instance', (_e, argv) => { if (argv.includes('--salir')) { quitting = true; app.quit(); } else showWindow(); });
+app.on('second-instance', (_e, argv) => {
+  if (argv.includes('--salir')) { quitting = true; app.quit(); }
+  else if (argv.includes('--demo-aviso')) promptUpdate(app.getVersion(), true);
+  else showWindow();
+});
 app.on('window-all-closed', () => { /* seguimos en la bandeja */ });
 app.on('before-quit', () => { quitting = true; stopAnim(); restoreSaved(); closeDev(); if (SHOT || DEVANIM) return; try { fs.writeFileSync(CFG_PATH, JSON.stringify(cfg, null, 1)); } catch { /* nada */ } });
 app.whenReady().then(() => {
@@ -405,5 +429,6 @@ app.whenReady().then(() => {
 `);
   } catch { /* sin registro */ }
   setupUpdater();
+  if (AVISO_SHOT) promptUpdate('9.9.9', true);
   setInterval(() => { if (updater) updater.checkForUpdates().catch(() => {}); }, 6 * 3600 * 1000);
 });
